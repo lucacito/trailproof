@@ -1,0 +1,22 @@
+{
+    "name": "trailproof",
+    "version": "0.1.0",
+    "description": "Accessibility remediation and audit trail for Divi",
+    "private": true,
+    "scripts": {
+        "build": "wp-scripts build assets/admin/index.js --output-path=build/admin && npm run copy-axe",
+        "start": "wp-scripts start assets/admin/index.js --output-path=build/admin",
+        "copy-axe": "cp node_modules/axe-core/axe.min.js build/axe.min.js",
+        "lint:js": "wp-scripts lint-js assets/admin"
+    },
+    "devDependencies": {
+        "@wordpress/scripts": "^30.0"
+    },
+    "dependencies": {
+        "@wordpress/api-fetch": "*",
+        "@wordpress/components": "*",
+        "@wordpress/element": "*",
+        "@wordpress/i18n": "*",
+        "axe-core": "^4.12.1"
+    }
+}
