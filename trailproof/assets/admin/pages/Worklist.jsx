@@ -55,9 +55,9 @@ function IssueGroupRow( { group, expanded, onToggle, onApplyGroup, onDecide, onA
 			<td style={ { fontSize: 13, fontWeight: 500 } }>
 				{ group.description || group.rule_id }
 				<div style={ { fontSize: 11, color: '#8c959f', marginTop: 2, fontWeight: 400 } }>
-					<code>{ group.rule_id }</code>{ ' · ' }{ instanceLabel }
+					{ instanceLabel }
 					{ group.open_count > 0 && group.instance_count > 1 && (
-						<span style={ { color: '#cf222e' } }>{ ` (${ group.open_count } open)` }</span>
+						<span style={ { color: '#cf222e' } }>{ ` (${ group.open_count } need attention)` }</span>
 					) }
 				</div>
 			</td>
@@ -168,9 +168,11 @@ function InstanceSubTable( { rule_id, bucket, onApply, onDecide, onApplyModal, s
 			<td></td>
 			<td></td>
 			<td style={ { paddingLeft: 16, color: '#50575e' } }>
-				<code style={ { fontSize: 11 } }>{ issue.selector }</code>
-				<div style={ { fontSize: 11, color: '#8c959f', marginTop: 2 } }>
-					{ issue.url }
+				<div style={ { fontSize: 12, color: '#1d2327', marginBottom: 2 } }>
+					{ urlPath( issue.url ) }
+				</div>
+				<div style={ { fontSize: 10, color: '#c3c4c7', fontFamily: 'monospace' } } title={ issue.selector }>
+					{ issue.selector?.length > 60 ? issue.selector.slice( 0, 60 ) + '…' : issue.selector }
 				</div>
 			</td>
 			<td></td>
@@ -201,14 +203,14 @@ function InstanceAction( { issue, saving, onApply, onDecide, onApplyModal } ) {
 				variant="primary" isSmall disabled={ saving }
 				onClick={ () => needsInput ? onApplyModal( issue ) : onApply( issue ) }
 			>
-				Apply
+				{ __( 'Apply fix', 'trailproof' ) }
 			</Button>
 		);
 	}
 	if ( issue.bucket === 'B' ) {
 		return (
 			<Button variant="secondary" isSmall onClick={ () => onDecide( issue ) }>
-				Decide
+				{ __( 'Review', 'trailproof' ) }
 			</Button>
 		);
 	}
@@ -216,6 +218,10 @@ function InstanceAction( { issue, saving, onApply, onDecide, onApplyModal } ) {
 }
 
 // ---- Main Worklist ----
+
+function urlPath( url ) {
+	try { return url ? new URL( url ).pathname : '—'; } catch { return url || '—'; }
+}
 
 const BUCKET_OPTIONS = [
 	{ label: __( 'All types', 'trailproof' ),               value: '' },
@@ -397,17 +403,14 @@ export default function Worklist( { navigate } ) {
 
 	return (
 		<div>
-			<div style={ { display: 'flex', alignItems: 'center', gap: '1rem', flexWrap: 'wrap', marginBottom: '0.75rem' } }>
-				<h1 style={ { margin: 0, fontSize: 20, fontWeight: 700 } }>{ __( 'Issues', 'trailproof' ) }</h1>
-				{ ! loading && (
-					<span style={ { color: '#646970', fontSize: 13 } }>
-						{ openCount > 0
-							? `${ openCount } problem ${ openCount === 1 ? 'type' : 'types' } need attention`
-							: __( 'Nothing open — great work!', 'trailproof' )
-						}
-					</span>
-				) }
-			</div>
+			{ ! loading && (
+				<p style={ { margin: '0 0 16px', color: '#64748B', fontSize: 13 } }>
+					{ openCount > 0
+						? `${ openCount } problem ${ openCount === 1 ? 'type needs' : 'types need' } attention — click the action button on any row to fix or review it`
+						: __( 'Nothing open — great work! Run a scan to check for new issues.', 'trailproof' )
+					}
+				</p>
+			) }
 
 			{ successMsg && (
 				<Notice status="success" isDismissible onRemove={ () => setSuccess( null ) } style={ { marginBottom: 12 } }>

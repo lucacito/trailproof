@@ -102,8 +102,9 @@ Settings stored as single option `trailproof_settings` (array) via `register_set
 | Phase | Status | Scope |
 |-------|--------|-------|
 | 0 | **Done** | Foundation: scaffold, DB, settings, REST stub, React placeholder, ScanProvider interface |
-| 1 | Next | axe-core client-side scan, static provider, issue storage + fingerprinting, dashboard + worklist, three-bucket classification, accessibility statement |
-| 2 | Future | Correction layer + revert, Bucket A one-click fixes, Bucket B decision UI, contrast picker, Bucket C checklist |
-| 3 | Future | Scheduled scans, regression detection, evidence bundle export, WAVE provider |
-| 4 | Future | Multi-site dashboard, white-label, Divi module fix pack |
-| 5 | Future | Author-side prevention in Divi 5 editor, PDF flagging, Elementor/Gutenberg providers |
+| 1 | **Done** | axe-core client-side scan, static provider, issue storage + fingerprinting, dashboard + worklist, three-bucket classification, accessibility statement |
+| 2 | **Done** | Correction layer + revert, Bucket A one-click fixes, Bucket B decision UI, contrast picker, Bucket C checklist |
+| 3 | **Done** | Scheduled scans, regression detection, evidence bundle export, WAVE provider |
+| 4 | **Done** | Multi-site dashboard, white-label, Divi module fix pack |
+| 5 | **Done** | Author-side prevention in Divi 5 editor, PDF flagging, Elementor/Gutenberg providers, focus-order preview |
+| 6 | **Done** | AI suggestions in Bucket B (Claude Haiku via `SuggestionService`), regression email alerts (`NotificationService`), token-gated client portal (`ClientPortalRoutes`, `ClientTokenRepository`, `tp_client_tokens` table) |

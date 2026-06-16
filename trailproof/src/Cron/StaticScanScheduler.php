@@ -99,14 +99,18 @@ class StaticScanScheduler {
 		$new_issues = max( 0, $after_open - $before_open );
 		$regressed  = max( 0, $after_regressed - $before_regressed );
 
-		// Store summary as a WP option so admin_notices can display it on next admin load
-		update_option( self::SUMMARY_OPTION, [
+		$summary = [
 			'pages_scanned' => count( $pages ),
 			'new_issues'    => $new_issues,
 			'regressed'     => $regressed,
 			'total_open'    => $after_open,
 			'ran_at'        => current_time( 'mysql' ),
-		], false );
+		];
+
+		// Store summary as a WP option so admin_notices can display it on next admin load
+		update_option( self::SUMMARY_OPTION, $summary, false );
+
+		do_action( 'trailproof_scan_complete', $summary );
 	}
 
 	/**

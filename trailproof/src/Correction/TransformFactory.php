@@ -13,6 +13,7 @@ use Trailproof\Correction\Transform\RewriteLinkTextTransform;
 use Trailproof\Correction\Transform\SetAltEmptyDecorativeTransform;
 use Trailproof\Correction\Transform\SetAltTransform;
 use Trailproof\Correction\Transform\SetLangTransform;
+use Trailproof\Correction\Transform\SetTitleTransform;
 use Trailproof\Correction\Transform\WidgetAriaPatternTransform;
 
 class TransformFactory {
@@ -20,6 +21,7 @@ class TransformFactory {
 	public static function create( string $type ): TransformInterface {
 		return match ( $type ) {
 			'set_lang'                 => new SetLangTransform(),
+			'set_title'                => new SetTitleTransform(),
 			'inject_skiplink'          => new InjectSkipLinkTransform(),
 			'add_landmark'             => new AddLandmarkTransform(),
 			'set_alt'                  => new SetAltTransform(),

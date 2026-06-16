@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Trailproof\Api;
 
 use Trailproof\Api\Routes\ChecklistRoutes;
+use Trailproof\Api\Routes\ClientPortalRoutes;
 use Trailproof\Api\Routes\CorrectionRoutes;
 use Trailproof\Api\Routes\DashboardRoutes;
 use Trailproof\Api\Routes\DecisionRoutes;
@@ -12,6 +13,8 @@ use Trailproof\Api\Routes\IssueRoutes;
 use Trailproof\Api\Routes\PageRoutes;
 use Trailproof\Api\Routes\ReportRoutes;
 use Trailproof\Api\Routes\ScanRoutes;
+use Trailproof\Api\Routes\SuggestionRoutes;
+use Trailproof\Repository\ClientTokenRepository;
 use Trailproof\Repository\CorrectionRepository;
 use Trailproof\Repository\DecisionLogRepository;
 use Trailproof\Repository\IssueRepository;
@@ -48,14 +51,18 @@ class RestApi {
 			]
 		);
 
+		$token_repo = new ClientTokenRepository();
+
 		( new PageRoutes( $runner ) )->register( self::REST_NAMESPACE );
 		( new ScanRoutes( $scan_repo, $issue_repo ) )->register( self::REST_NAMESPACE );
 		( new IssueRoutes( $issue_repo, $log_repo ) )->register( self::REST_NAMESPACE );
-		( new DashboardRoutes( $scan_repo, $issue_repo ) )->register( self::REST_NAMESPACE );
+		( new DashboardRoutes( $scan_repo, $issue_repo, $log_repo ) )->register( self::REST_NAMESPACE );
 		( new CorrectionRoutes( $corr_repo, $issue_repo, $log_repo ) )->register( self::REST_NAMESPACE );
 		( new DecisionRoutes( $issue_repo, $corr_repo, $log_repo ) )->register( self::REST_NAMESPACE );
 		( new ChecklistRoutes( $log_repo ) )->register( self::REST_NAMESPACE );
 		( new ReportRoutes( $issue_repo, $scan_repo, $log_repo ) )->register( self::REST_NAMESPACE );
+		( new SuggestionRoutes( $issue_repo, $log_repo ) )->register( self::REST_NAMESPACE );
+		( new ClientPortalRoutes( $token_repo, $issue_repo, $scan_repo, $log_repo ) )->register( self::REST_NAMESPACE );
 	}
 
 	public function get_status( \WP_REST_Request $request ): \WP_REST_Response {

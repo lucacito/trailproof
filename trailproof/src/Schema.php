@@ -10,7 +10,7 @@ class Schema {
 	 * Bump this integer whenever table structure changes.
 	 * run_migrations() applies each version's changes in order.
 	 */
-	private const CURRENT_VERSION = 2;
+	private const CURRENT_VERSION = 3;
 
 	private const OPTION_KEY = 'trailproof_schema_version';
 
@@ -30,12 +30,39 @@ class Schema {
 			self::migrate_v2();
 			update_option( self::OPTION_KEY, 2 );
 		}
+
+		if ( $installed < 3 ) {
+			self::migrate_v3();
+			update_option( self::OPTION_KEY, 3 );
+		}
 	}
 
 	/**
 	 * Add node_data_json to tp_issues.
 	 * Stores per-node axe-core data (HTML snippet, fg/bg colors for contrast) needed by the decision UI.
 	 */
+	private static function migrate_v3(): void {
+		global $wpdb;
+
+		$c = $wpdb->get_charset_collate();
+
+		require_once ABSPATH . 'wp-admin/includes/upgrade.php';
+
+		dbDelta(
+			"CREATE TABLE {$wpdb->prefix}tp_client_tokens (
+				id         bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT,
+				token      varchar(64)         NOT NULL,
+				label      varchar(255)        NOT NULL DEFAULT '',
+				expires_at datetime            DEFAULT NULL,
+				revoked    tinyint(1)          NOT NULL DEFAULT 0,
+				created_by bigint(20) UNSIGNED NOT NULL,
+				created_at datetime            NOT NULL DEFAULT CURRENT_TIMESTAMP,
+				PRIMARY KEY (id),
+				UNIQUE KEY token (token)
+			) $c;"
+		);
+	}
+
 	private static function migrate_v2(): void {
 		global $wpdb;
 

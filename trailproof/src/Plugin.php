@@ -9,7 +9,9 @@ use Trailproof\Admin\SettingsPage;
 use Trailproof\Api\RestApi;
 use Trailproof\Correction\CorrectionEngine;
 use Trailproof\Cron\StaticScanScheduler;
+use Trailproof\Notification\NotificationService;
 use Trailproof\Repository\CorrectionRepository;
+use Trailproof\Repository\IssueRepository;
 use Trailproof\Scan\DiviEditorPrevention;
 
 class Plugin {
@@ -22,15 +24,18 @@ class Plugin {
 		}
 		self::$initialized = true;
 
-		$settings_page     = new SettingsPage();
-		$admin_menu        = new AdminMenu( $settings_page );
-		$rest_api          = new RestApi();
-		$scheduler         = new StaticScanScheduler();
-		$correction_engine = new CorrectionEngine( new CorrectionRepository() );
-		$divi_prevention   = new DiviEditorPrevention();
+		$settings_page        = new SettingsPage();
+		$admin_menu           = new AdminMenu( $settings_page );
+		$rest_api             = new RestApi();
+		$scheduler            = new StaticScanScheduler();
+		$correction_engine    = new CorrectionEngine( new CorrectionRepository() );
+		$divi_prevention      = new DiviEditorPrevention();
+		$notification_service = new NotificationService( new IssueRepository() );
 
 		// Cron hook + custom schedule must be registered on every load
 		$scheduler->register();
+
+		add_action( 'trailproof_scan_complete', [ $notification_service, 'on_scan_complete' ] );
 
 		// Render-time correction layer (non-destructive, output buffering)
 		$correction_engine->register();

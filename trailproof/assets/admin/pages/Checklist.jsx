@@ -37,17 +37,17 @@ export default function Checklist() {
 
 	return (
 		<div>
-			<div style={ { display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '0.5rem' } }>
-				<h1 style={ { margin: 0 } }>{ __( 'Manual Checklist', 'trailproof' ) }</h1>
-				{ allDone && (
-					<span style={ { color: '#1a7f37', fontWeight: 600, fontSize: 13 } }>
-						✓ { __( 'All items signed off', 'trailproof' ) }
-					</span>
-				) }
-			</div>
+			{ ! loading && items.length > 0 && (
+				<p style={ { margin: '0 0 16px', color: '#64748B', fontSize: 13 } }>
+					{ allDone
+						? __( 'All items signed off — great work!', 'trailproof' )
+						: `${ ( counts.pending || 0 ) } ${ __( 'items still to review', 'trailproof' ) }`
+					}
+				</p>
+			) }
 
 			<p style={ { color: '#50575e', fontSize: 13, marginBottom: 12 } }>
-				{ __( 'These Bucket C items cannot be detected automatically. Manually review each one and record your finding. Each sign-off is saved to the audit log.', 'trailproof' ) }
+				{ __( "These items can't be verified automatically — a human needs to review each one and record their finding. Each sign-off is saved to the audit log.", 'trailproof' ) }
 			</p>
 
 			{ /* Progress summary */ }
@@ -73,11 +73,11 @@ export default function Checklist() {
 }
 
 const PILL_META = {
-	pass:    { label: 'Pass',    bg: '#dafbe1', color: '#1a7f37' },
-	fail:    { label: 'Fail',    bg: '#ffeef0', color: '#cf222e' },
-	defer:   { label: 'Defer',  bg: '#fff3cd', color: '#856404' },
-	na:      { label: 'N/A',     bg: '#e2e3e5', color: '#383d41' },
-	pending: { label: 'Pending', bg: '#f0f0f0', color: '#666' },
+	pass:    { label: 'Passed ✓',       bg: '#dafbe1', color: '#1a7f37' },
+	fail:    { label: 'Needs fixing',    bg: '#ffeef0', color: '#cf222e' },
+	defer:   { label: 'Deferred',        bg: '#fff3cd', color: '#856404' },
+	na:      { label: 'Not applicable',  bg: '#e2e3e5', color: '#383d41' },
+	pending: { label: 'Not reviewed yet', bg: '#f0f0f0', color: '#666' },
 };
 
 function ProgressPill( { status, count, total } ) {

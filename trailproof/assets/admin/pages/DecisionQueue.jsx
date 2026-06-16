@@ -48,57 +48,68 @@ export default function DecisionQueue() {
 
 	return (
 		<div>
-			<div style={ { display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1rem' } }>
-				<h1 style={ { margin: 0 } }>{ __( 'Decision Queue', 'trailproof' ) }</h1>
-				<span style={ { color: '#646970', fontSize: 13 } }>
-					{ loading ? __( 'Loading…', 'trailproof' ) : `${ open.length } ${ __( 'awaiting decision', 'trailproof' ) }` }
-				</span>
-			</div>
+			{ ! loading && (
+				<p style={ { margin: '0 0 16px', color: '#64748B', fontSize: 13 } }>
+					{ open.length > 0
+						? `${ open.length } ${ open.length === 1 ? __( 'issue needs your input', 'trailproof' ) : __( 'issues need your input', 'trailproof' ) }`
+						: __( 'All issues decided — great work!', 'trailproof' )
+					}
+				</p>
+			) }
 
 			<p style={ { color: '#50575e', fontSize: 13, marginBottom: 16 } }>
-				{ __( 'Bucket B issues require a human decision before a fix is applied. Review each issue and choose to apply a fix, defer, or mark as not applicable.', 'trailproof' ) }
+				{ __( 'These issues were detected automatically, but the right fix depends on context only you know. Review each one and choose what to do — you can apply a fix, skip it, or mark it as not applicable.', 'trailproof' ) }
 			</p>
 
 			{ loading ? (
 				<p>{ __( 'Loading…', 'trailproof' ) }</p>
 			) : open.length === 0 ? (
-				<p style={ { color: '#1a7f37', fontWeight: 600 } }>
-					{ __( '✓ No open Bucket B issues. All have been decided.', 'trailproof' ) }
-				</p>
+				<div style={ { textAlign: 'center', padding: '24px 16px', background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: 6 } }>
+					<div style={ { fontSize: 24, marginBottom: 6 } } aria-hidden="true">✓</div>
+					<p style={ { color: '#1a7f37', fontWeight: 600, fontSize: 13, margin: 0 } }>
+						{ __( 'All issues decided.', 'trailproof' ) }
+					</p>
+					<p style={ { color: '#50575e', fontSize: 12, margin: '4px 0 0' } }>
+						{ __( 'No open "Needs your decision" issues remain.', 'trailproof' ) }
+					</p>
+				</div>
 			) : (
 				<table className="wp-list-table widefat fixed striped" style={ { tableLayout: 'auto' } }>
 					<thead>
 						<tr>
-							<th>{ __( 'Severity', 'trailproof' ) }</th>
-							<th>{ __( 'Rule', 'trailproof' ) }</th>
-							<th>{ __( 'Description', 'trailproof' ) }</th>
-							<th>{ __( 'WCAG', 'trailproof' ) }</th>
-							<th>{ __( 'Selector', 'trailproof' ) }</th>
-							<th></th>
+							<th style={ { width: 110 } }>{ __( 'Impact', 'trailproof' ) }</th>
+							<th>{ __( 'What was found', 'trailproof' ) }</th>
+							<th style={ { width: 150 } }></th>
 						</tr>
 					</thead>
 					<tbody>
 						{ open.map( ( issue ) => (
 							<tr key={ issue.id }>
 								<td><SeverityDot severity={ issue.severity } /></td>
-								<td><code>{ issue.rule_id }</code></td>
-								<td style={ { maxWidth: 260 } }>{ issue.description }</td>
 								<td>
-									<a
-										href={ `https://www.w3.org/WAI/WCAG21/Understanding/${ wcagSlug( issue.wcag_sc ) }` }
-										target="_blank"
-										rel="noreferrer"
-									>
-										{ issue.wcag_sc }
-									</a>
+									<div style={ { fontSize: 13, color: '#1d2327', marginBottom: 4 } }>
+										{ issue.description }
+									</div>
+									{ issue.wcag_sc && (
+										<div style={ { fontSize: 11, color: '#8c959f' } }>
+											{ __( 'Standard:', 'trailproof' ) }{ ' ' }
+											<a
+												href={ `https://www.w3.org/WAI/WCAG21/Understanding/${ wcagSlug( issue.wcag_sc ) }` }
+												target="_blank"
+												rel="noreferrer"
+												style={ { color: '#8c959f' } }
+											>
+												WCAG { issue.wcag_sc }
+											</a>
+										</div>
+									) }
 								</td>
-								<td><code style={ { fontSize: 11 } }>{ issue.selector }</code></td>
 								<td>
 									<Button
 										variant="primary"
 										onClick={ () => setActive( issue ) }
 									>
-										{ __( 'Decide', 'trailproof' ) }
+										{ __( 'Review & decide', 'trailproof' ) }
 									</Button>
 								</td>
 							</tr>
@@ -110,22 +121,20 @@ export default function DecisionQueue() {
 			{ ! loading && closed.length > 0 && (
 				<details style={ { marginTop: 24 } }>
 					<summary style={ { cursor: 'pointer', fontWeight: 600, fontSize: 13 } }>
-						{ closed.length } { __( 'decided', 'trailproof' ) }
+						{ closed.length } { __( 'already decided', 'trailproof' ) }
 					</summary>
 					<table className="wp-list-table widefat fixed striped" style={ { marginTop: 8, tableLayout: 'auto' } }>
 						<thead>
 							<tr>
-								<th>{ __( 'Rule', 'trailproof' ) }</th>
-								<th>{ __( 'Description', 'trailproof' ) }</th>
-								<th>{ __( 'Status', 'trailproof' ) }</th>
+								<th>{ __( 'What was found', 'trailproof' ) }</th>
+								<th style={ { width: 130 } }>{ __( 'Outcome', 'trailproof' ) }</th>
 							</tr>
 						</thead>
 						<tbody>
 							{ closed.map( ( issue ) => (
 								<tr key={ issue.id }>
-									<td><code>{ issue.rule_id }</code></td>
 									<td>{ issue.description }</td>
-									<td><StatusBadge status={ issue.status } /></td>
+									<td><StatusBadge status={ issue.status } bucket="B" /></td>
 								</tr>
 							) ) }
 						</tbody>

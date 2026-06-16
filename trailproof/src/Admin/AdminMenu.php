@@ -37,6 +37,15 @@ class AdminMenu {
 			'trailproof-settings',
 			[ $this->settings_page, 'render' ]
 		);
+
+		add_submenu_page(
+			'trailproof',
+			__( 'Client Portal', 'trailproof' ),
+			__( 'Client Portal', 'trailproof' ),
+			'manage_options',
+			'trailproof-client-portal',
+			[ $this, 'render_dashboard' ]
+		);
 	}
 
 	public function enqueue_assets( string $hook ): void {
@@ -70,6 +79,7 @@ class AdminMenu {
 				'axeUrl'           => TRAILPROOF_URL . 'build/axe.min.js',
 				'locale'           => str_replace( '_', '-', get_locale() ),
 				'waveEnabled'      => ! empty( $settings['wave_api_key'] ),
+				'claudeEnabled'    => ! empty( $settings['claude_api_key'] ),
 				'whiteLabel'       => ! empty( $settings['white_label'] ),
 				'gutenbergEnabled' => function_exists( 'use_block_editor_for_post_type' ),
 				'elementorEnabled' => defined( 'ELEMENTOR_VERSION' ) || class_exists( '\Elementor\Plugin' ),

@@ -325,6 +325,68 @@ class IssueRepository {
 	}
 
 	/**
+	 * Returns weighted open/total counts for Bucket A issues, used by HealthScore component A.
+	 * Weights: critical=10, serious=6, moderate=3, minor=1.
+	 */
+	public function get_score_inputs_a(): array {
+		global $wpdb;
+
+		$rows = (array) $wpdb->get_results(
+			"SELECT severity,
+			        COUNT(*) AS total,
+			        SUM(CASE WHEN status IN ('open','regressed') THEN 1 ELSE 0 END) AS open_count
+			 FROM {$wpdb->prefix}tp_issues
+			 WHERE bucket = 'A'
+			 GROUP BY severity",
+			ARRAY_A
+		);
+
+		$weight_map = [ 'critical' => 10, 'serious' => 6, 'moderate' => 3, 'minor' => 1 ];
+
+		$weighted_total = 0;
+		$weighted_open  = 0;
+		$total          = 0;
+		$open           = 0;
+
+		foreach ( $rows as $row ) {
+			$w               = $weight_map[ strtolower( $row['severity'] ) ] ?? 1;
+			$weighted_total += (int) $row['total'] * $w;
+			$weighted_open  += (int) $row['open_count'] * $w;
+			$total          += (int) $row['total'];
+			$open           += (int) $row['open_count'];
+		}
+
+		return [
+			'total'          => $total,
+			'open'           => $open,
+			'weighted_total' => $weighted_total,
+			'weighted_open'  => $weighted_open,
+		];
+	}
+
+	/**
+	 * Returns decided/total counts for Bucket B issues, used by HealthScore component B.
+	 * "Decided" = any status other than open or regressed.
+	 */
+	public function get_score_inputs_b(): array {
+		global $wpdb;
+
+		$row = $wpdb->get_row(
+			"SELECT
+			    COUNT(*) AS total,
+			    SUM(CASE WHEN status NOT IN ('open','regressed') THEN 1 ELSE 0 END) AS decided
+			 FROM {$wpdb->prefix}tp_issues
+			 WHERE bucket = 'B'",
+			ARRAY_A
+		);
+
+		return [
+			'total'   => (int) ( $row['total'] ?? 0 ),
+			'decided' => (int) ( $row['decided'] ?? 0 ),
+		];
+	}
+
+	/**
 	 * Return all issues for export (no pagination limit).
 	 * Ordered by priority_score DESC so the CSV is most-critical-first.
 	 */

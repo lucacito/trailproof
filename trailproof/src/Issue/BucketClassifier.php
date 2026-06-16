@@ -13,7 +13,6 @@ class BucketClassifier {
 	private const BUCKET_A = [
 		'html-has-lang',
 		'bypass',                   // skip-to-content link
-		'document-title',
 		'landmark-one-main',
 		'landmark-complementary-is-top-level',
 		'landmark-no-duplicate-banner',
@@ -48,6 +47,7 @@ class BucketClassifier {
 	 * Never auto-fix these.
 	 */
 	private const BUCKET_B = [
+		'document-title',           // correct title is human knowledge; use set_title transform
 		'color-contrast',
 		'color-contrast-enhanced',
 		'heading-order',

@@ -1,5 +1,6 @@
 import { useState } from '@wordpress/element';
-import { Button, TextareaControl, TextControl, Notice } from '@wordpress/components';
+import { __ } from '@wordpress/i18n';
+import { Button, TextareaControl, TextControl, Notice, Spinner } from '@wordpress/components';
 import apiFetch from '@wordpress/api-fetch';
 import ContrastPicker from './ContrastPicker';
 
@@ -22,6 +23,7 @@ export default function DecisionScreen( { issue, onDecision, onCancel } ) {
 	const [ altText, setAltText ]           = useState( nodeData?.alt || '' );
 	const [ linkText, setLinkText ]         = useState( '' );
 	const [ ariaLabel, setAriaLabel ]       = useState( '' );
+	const [ pageTitle, setPageTitle ]       = useState( nodeData?.title || '' );
 
 	const ruleId = issue.rule_id;
 
@@ -45,6 +47,14 @@ export default function DecisionScreen( { issue, onDecision, onCancel } ) {
 
 	function buildApplyPayload() {
 		switch ( ruleId ) {
+			case 'document-title':
+				if ( ! pageTitle.trim() ) return null;
+				return {
+					transform_type: 'set_title',
+					payload: { title: pageTitle.trim() },
+					original: { title: nodeData?.title || '' },
+				};
+
 			case 'color-contrast':
 			case 'color-contrast-enhanced':
 				if ( ! contrastData?.passesAA ) return null;
@@ -107,23 +117,35 @@ export default function DecisionScreen( { issue, onDecision, onCancel } ) {
 		<div style={ { background: '#fff', border: '1px solid #c3c4c7', borderRadius: 4, padding: 24, maxWidth: 760 } }>
 			{/* Header */}
 			<div style={ { marginBottom: 16 } }>
-				<span style={ { fontWeight: 700, fontSize: 15 } }>{ issue.description }</span>
-				{ ' ' }
-				<span style={ badgeStyle( 'B' ) }>Bucket B</span>
-				<div style={ { color: '#666', fontSize: 12, marginTop: 4 } }>
-					WCAG { issue.wcag_sc } · { issue.selector }
+				<div style={ { fontWeight: 700, fontSize: 16, color: '#1d2327', marginBottom: 6 } }>{ issue.description }</div>
+				<div style={ { fontSize: 12, color: '#8c959f' } }>
+					{ __( 'This issue needs your input — review the before/after below and choose what to do.', 'trailproof' ) }
+					{ issue.wcag_sc && (
+						<span style={ { marginLeft: 8 } }>
+							{ __( 'Standard:', 'trailproof' ) }{ ' ' }
+							<a
+								href={ `https://www.w3.org/WAI/WCAG21/Understanding/${ issue.wcag_sc.replace( /\./g, '' ) }` }
+								target="_blank"
+								rel="noreferrer"
+								style={ { color: '#8c959f' } }
+							>
+								WCAG { issue.wcag_sc }
+							</a>
+						</span>
+					) }
 				</div>
 			</div>
 
 			{/* Before panel */}
 			<div style={ { display: 'flex', gap: 16, marginBottom: 20, flexWrap: 'wrap' } }>
-				<Panel title="Before (current)" accent="#cf222e">
+				<Panel title={ __( 'What it looks like now', 'trailproof' ) } accent="#cf222e">
 					<BeforeContent ruleId={ ruleId } nodeData={ nodeData } />
 				</Panel>
 
 				{/* After / fix input */}
-				<Panel title="After (your fix)" accent="#1a7f37">
+				<Panel title={ __( 'What the fix will do', 'trailproof' ) } accent="#1a7f37">
 					<AfterInput
+						issueId={ issue.id }
 						ruleId={ ruleId }
 						nodeData={ nodeData }
 						isLargeText={ isLargeText }
@@ -135,36 +157,41 @@ export default function DecisionScreen( { issue, onDecision, onCancel } ) {
 						setLinkText={ setLinkText }
 						ariaLabel={ ariaLabel }
 						setAriaLabel={ setAriaLabel }
+						pageTitle={ pageTitle }
+						setPageTitle={ setPageTitle }
 					/>
 				</Panel>
 			</div>
 
 			{ /* Note */ }
 			<TextareaControl
-				label="Note (optional)"
+				label={ __( 'Add a note (optional)', 'trailproof' ) }
 				value={ note }
 				onChange={ setNote }
 				rows={ 2 }
-				help="Saved to the audit log."
+				help={ __( 'Your note will be saved alongside this decision in the audit log.', 'trailproof' ) }
 			/>
 
 			{ error && <Notice status="error" isDismissible={ false }>{ error }</Notice> }
 
 			{/* Actions */}
-			<div style={ { display: 'flex', gap: 8, marginTop: 12 } }>
+			<div style={ { display: 'flex', gap: 8, marginTop: 12, flexWrap: 'wrap', alignItems: 'center' } }>
 				<Button variant="primary" onClick={ handleApply } disabled={ saving }>
-					Apply fix
+					{ __( 'Apply this fix', 'trailproof' ) }
 				</Button>
-				<Button variant="secondary" onClick={ () => decide( 'defer' ) } disabled={ saving }>
-					Defer
+				<Button variant="secondary" onClick={ () => decide( 'defer' ) } disabled={ saving } title={ __( "Skip for now — come back to it later. It will stay in your list.", 'trailproof' ) }>
+					{ __( 'Skip for now', 'trailproof' ) }
 				</Button>
-				<Button variant="secondary" onClick={ () => decide( 'na' ) } disabled={ saving }>
-					Mark N/A
+				<Button variant="secondary" onClick={ () => decide( 'na' ) } disabled={ saving } title={ __( "This issue doesn't apply to your site — dismiss it permanently.", 'trailproof' ) }>
+					{ __( "Doesn't apply to my site", 'trailproof' ) }
 				</Button>
 				<Button variant="tertiary" onClick={ onCancel } disabled={ saving }>
-					Cancel
+					{ __( 'Cancel', 'trailproof' ) }
 				</Button>
 			</div>
+			<p style={ { fontSize: 11, color: '#8c959f', marginTop: 10, marginBottom: 0 } }>
+				{ __( 'Your choice is saved to the audit log and can be reviewed at any time.', 'trailproof' ) }
+			</p>
 		</div>
 	);
 }
@@ -203,7 +230,63 @@ function BeforeContent( { ruleId, nodeData } ) {
 	return <em style={ { color: '#666' } }>No preview available.</em>;
 }
 
-function AfterInput( { ruleId, nodeData, isLargeText, contrastData, setContrastData, altText, setAltText, linkText, setLinkText, ariaLabel, setAriaLabel } ) {
+const AI_SUGGEST_RULES = [ 'image-alt', 'input-image-alt', 'area-alt', 'link-name', 'button-name', 'label' ];
+
+function SuggestButton( { issueId, onSuggestion } ) {
+	const [ loading, setLoading ] = useState( false );
+	const [ error, setError ]     = useState( null );
+	const claudeEnabled = window.trailproofData?.claudeEnabled;
+
+	if ( ! claudeEnabled ) return null;
+
+	async function handleSuggest() {
+		setLoading( true );
+		setError( null );
+		try {
+			const res = await apiFetch( {
+				path: `/trailproof/v1/issues/${ issueId }/suggest`,
+				method: 'POST',
+			} );
+			onSuggestion( res.suggestion );
+		} catch ( err ) {
+			setError( err?.message || 'AI suggestion unavailable.' );
+		} finally {
+			setLoading( false );
+		}
+	}
+
+	return (
+		<div style={ { marginBottom: 8 } }>
+			<Button
+				variant="secondary"
+				onClick={ handleSuggest }
+				disabled={ loading }
+				style={ { fontSize: 12 } }
+			>
+				{ loading ? <><Spinner /> Suggesting…</> : '✦ Suggest with AI' }
+			</Button>
+			{ error && (
+				<span style={ { marginLeft: 8, fontSize: 12, color: '#cf222e' } }>{ error }</span>
+			) }
+		</div>
+	);
+}
+
+function AfterInput( { issueId, ruleId, nodeData, isLargeText, contrastData, setContrastData, altText, setAltText, linkText, setLinkText, ariaLabel, setAriaLabel, pageTitle, setPageTitle } ) {
+	const canSuggest = AI_SUGGEST_RULES.includes( ruleId );
+
+	if ( ruleId === 'document-title' ) {
+		return (
+			<TextControl
+				label={ __( 'Page title', 'trailproof' ) }
+				value={ pageTitle }
+				onChange={ setPageTitle }
+				placeholder="e.g. About Us | My Company"
+				help={ __( "This appears in the browser tab and bookmarks. Keep it descriptive and include your site name. Example: \"Contact | Acme Co\"", 'trailproof' ) }
+			/>
+		);
+	}
+
 	if ( [ 'color-contrast', 'color-contrast-enhanced' ].includes( ruleId ) ) {
 		return (
 			<ContrastPicker
@@ -217,34 +300,43 @@ function AfterInput( { ruleId, nodeData, isLargeText, contrastData, setContrastD
 
 	if ( [ 'image-alt', 'input-image-alt', 'area-alt' ].includes( ruleId ) ) {
 		return (
-			<TextControl
-				label="Alt text"
-				value={ altText }
-				onChange={ setAltText }
-				help="Describe the image for screen reader users. Leave blank to mark as decorative instead."
-			/>
+			<>
+				{ canSuggest && <SuggestButton issueId={ issueId } onSuggestion={ setAltText } /> }
+				<TextControl
+					label="Alt text"
+					value={ altText }
+					onChange={ setAltText }
+					help={ altText && altText !== ( nodeData?.alt || '' ) ? 'AI suggestion — review before applying.' : 'Describe the image for screen reader users. Leave blank to mark as decorative instead.' }
+				/>
+			</>
 		);
 	}
 
 	if ( [ 'link-name', 'button-name' ].includes( ruleId ) ) {
 		return (
-			<TextControl
-				label="Accessible name"
-				value={ linkText }
-				onChange={ setLinkText }
-				help="A clear, descriptive label for this link or button."
-			/>
+			<>
+				{ canSuggest && <SuggestButton issueId={ issueId } onSuggestion={ setLinkText } /> }
+				<TextControl
+					label="Accessible name"
+					value={ linkText }
+					onChange={ setLinkText }
+					help={ linkText ? 'AI suggestion — review before applying.' : 'A clear, descriptive label for this link or button.' }
+				/>
+			</>
 		);
 	}
 
 	if ( ruleId === 'label' ) {
 		return (
-			<TextControl
-				label="Label text"
-				value={ ariaLabel }
-				onChange={ setAriaLabel }
-				help="The visible or hidden label for this form field."
-			/>
+			<>
+				{ canSuggest && <SuggestButton issueId={ issueId } onSuggestion={ setAriaLabel } /> }
+				<TextControl
+					label="Label text"
+					value={ ariaLabel }
+					onChange={ setAriaLabel }
+					help={ ariaLabel ? 'AI suggestion — review before applying.' : 'The visible or hidden label for this form field.' }
+				/>
+			</>
 		);
 	}
 

@@ -182,57 +182,58 @@ export default function Scan( { navigate } ) {
 
 	return (
 		<div>
-			<h1 style={ { marginTop: 0 } }>{ __( 'Scan', 'trailproof' ) }</h1>
+			<h1 style={ { marginTop: 0 } }>{ __( '🔍 Scan your website', 'trailproof' ) }</h1>
 
-			<p>
-				{ __( 'The scanner loads each in-scope page in a hidden iframe inside your authenticated session, runs axe-core, and stores the results. Pages are scanned sequentially.', 'trailproof' ) }
+			<p style={ { color: '#50575e', fontSize: 14, lineHeight: 1.6, maxWidth: 560, marginBottom: 20 } }>
+				{ __( 'Trailproof will check each page of your website for accessibility issues. The scan runs in the background and may take a few minutes depending on how many pages you have.', 'trailproof' ) }
 			</p>
 
 			{ ! axeUrl && (
 				<div style={ { background: '#fcf0f1', border: '1px solid #d63638', borderRadius: 4, padding: '1rem', marginBottom: '1rem' } }>
-					{ __( 'axe-core bundle not found. Run npm run build first.', 'trailproof' ) }
+					{ __( 'Scanner not ready. Please contact your developer.', 'trailproof' ) }
 				</div>
 			) }
 
-			{ /* Additional scan provider options */ }
-			<div style={ { marginBottom: 16, padding: '12px 16px', background: '#f9f9f9', border: '1px solid #ddd', borderRadius: 4 } }>
-				<p style={ { margin: '0 0 10px', fontWeight: 600, fontSize: 13 } }>
-					{ __( 'Additional scan providers (optional)', 'trailproof' ) }
-				</p>
-
-				{ waveEnabled && (
-					<CheckboxControl
-						label={ __( 'WAVE second-opinion scan (uses your WebAIM API credits)', 'trailproof' ) }
-						checked={ includeWave }
-						onChange={ setWave }
-						__nextHasNoMarginBottom
-					/>
-				) }
-				{ ! waveEnabled && (
-					<p style={ { margin: '0 0 6px', fontSize: 12, color: '#646970' } }>
-						{ __( 'WAVE: add your WebAIM API key in ', 'trailproof' ) }
-						<a href="?page=trailproof-settings">{ __( 'Settings', 'trailproof' ) }</a>
-						{ __( ' to enable. Review WebAIM\'s API terms before use.', 'trailproof' ) }
+			{ /* Optional extras */ }
+			{ ( waveEnabled || gbEnabled || elemEnabled ) && (
+				<div style={ { marginBottom: 16, padding: '12px 16px', background: '#f9f9f9', border: '1px solid #ddd', borderRadius: 4 } }>
+					<p style={ { margin: '0 0 10px', fontWeight: 600, fontSize: 13 } }>
+						{ __( 'Optional: run extra checks', 'trailproof' ) }
 					</p>
-				) }
 
-				{ gbEnabled && (
-					<CheckboxControl
-						label={ __( 'Gutenberg block-specific structural scan (server-side)', 'trailproof' ) }
-						checked={ includeGutenberg }
-						onChange={ setGb }
-						__nextHasNoMarginBottom
-					/>
-				) }
-				{ elemEnabled && (
-					<CheckboxControl
-						label={ __( 'Elementor widget-specific structural scan (server-side)', 'trailproof' ) }
-						checked={ includeElementor }
-						onChange={ setElem }
-						__nextHasNoMarginBottom
-					/>
-				) }
-			</div>
+					{ waveEnabled && (
+						<CheckboxControl
+							label={ __( 'Run a second independent check with WAVE (uses your API credits)', 'trailproof' ) }
+							checked={ includeWave }
+							onChange={ setWave }
+							__nextHasNoMarginBottom
+						/>
+					) }
+					{ gbEnabled && (
+						<CheckboxControl
+							label={ __( 'Also check Gutenberg blocks', 'trailproof' ) }
+							checked={ includeGutenberg }
+							onChange={ setGb }
+							__nextHasNoMarginBottom
+						/>
+					) }
+					{ elemEnabled && (
+						<CheckboxControl
+							label={ __( 'Also check Elementor widgets', 'trailproof' ) }
+							checked={ includeElementor }
+							onChange={ setElem }
+							__nextHasNoMarginBottom
+						/>
+					) }
+				</div>
+			) }
+
+			{ ! waveEnabled && (
+				<p style={ { fontSize: 12, color: '#646970', marginBottom: 16 } }>
+					{ __( 'Want a second opinion from WAVE? Add your WebAIM API key in ', 'trailproof' ) }
+					<a href="?page=trailproof-settings">{ __( 'Settings', 'trailproof' ) }</a>.
+				</p>
+			) }
 
 			<div style={ { display: 'flex', gap: 8, marginBottom: '1.5rem', flexWrap: 'wrap' } }>
 				{ ! scanning && (
@@ -272,7 +273,7 @@ export default function Scan( { navigate } ) {
 
 			{ done && errors.length === 0 && (
 				<div style={ { background: '#edfaef', border: '1px solid #00a32a', borderRadius: 4, padding: '1rem', marginBottom: '1rem' } }>
-					{ __( 'All pages scanned successfully. Check the worklist for results.', 'trailproof' ) }
+					{ __( 'Scan complete! Head to "Fix Issues" to see what was found.', 'trailproof' ) }
 				</div>
 			) }
 

@@ -24,6 +24,7 @@ class SettingsPage {
 		add_settings_section( 'trailproof_scan_scope', __( 'Scan Scope', 'trailproof' ), null, self::PAGE_SLUG );
 		add_settings_section( 'trailproof_schedule', __( 'Schedule', 'trailproof' ), null, self::PAGE_SLUG );
 		add_settings_section( 'trailproof_integrations', __( 'Integrations', 'trailproof' ), null, self::PAGE_SLUG );
+		add_settings_section( 'trailproof_notifications', __( 'Notifications', 'trailproof' ), null, self::PAGE_SLUG );
 
 		add_settings_field( 'post_types', __( 'Post Types to Scan', 'trailproof' ), [ $this, 'render_post_types_field' ], self::PAGE_SLUG, 'trailproof_scan_scope' );
 		add_settings_field( 'url_include', __( 'URL Include Pattern', 'trailproof' ), [ $this, 'render_url_include_field' ], self::PAGE_SLUG, 'trailproof_scan_scope' );
@@ -31,6 +32,9 @@ class SettingsPage {
 		add_settings_field( 'scan_schedule', __( 'Scan Frequency', 'trailproof' ), [ $this, 'render_schedule_field' ], self::PAGE_SLUG, 'trailproof_schedule' );
 		add_settings_field( 'white_label', __( 'White-Label Mode', 'trailproof' ), [ $this, 'render_white_label_field' ], self::PAGE_SLUG, 'trailproof_integrations' );
 		add_settings_field( 'wave_api_key', __( 'WAVE API Key (optional)', 'trailproof' ), [ $this, 'render_wave_api_key_field' ], self::PAGE_SLUG, 'trailproof_integrations' );
+		add_settings_field( 'claude_api_key', __( 'Claude API Key (AI Suggestions)', 'trailproof' ), [ $this, 'render_claude_api_key_field' ], self::PAGE_SLUG, 'trailproof_integrations' );
+		add_settings_field( 'notification_email', __( 'Notification Email', 'trailproof' ), [ $this, 'render_notification_email_field' ], self::PAGE_SLUG, 'trailproof_notifications' );
+		add_settings_field( 'notify_on_regression', __( 'Regression Alerts', 'trailproof' ), [ $this, 'render_notify_on_regression_field' ], self::PAGE_SLUG, 'trailproof_notifications' );
 	}
 
 	public function render(): void {
@@ -133,6 +137,42 @@ class SettingsPage {
 		);
 	}
 
+	public function render_claude_api_key_field(): void {
+		$settings = $this->get_settings();
+		$has_key  = ! empty( $settings['claude_api_key'] );
+		printf(
+			'<input type="password" name="%1$s[claude_api_key]" value="%2$s" class="regular-text" autocomplete="off">
+			<p class="description">%3$s</p>',
+			esc_attr( self::OPTION_KEY ),
+			esc_attr( $has_key ? $settings['claude_api_key'] : '' ),
+			esc_html__( 'Optional. Anthropic API key. When set, a "Suggest" button appears in the Bucket B decision screen to pre-fill alt text and link text using Claude. You are billed directly by Anthropic for usage.', 'trailproof' )
+		);
+	}
+
+	public function render_notification_email_field(): void {
+		$settings = $this->get_settings();
+		printf(
+			'<input type="email" name="%1$s[notification_email]" value="%2$s" class="regular-text" placeholder="%3$s">
+			<p class="description">%4$s</p>',
+			esc_attr( self::OPTION_KEY ),
+			esc_attr( $settings['notification_email'] ),
+			esc_attr( get_option( 'admin_email' ) ),
+			esc_html__( 'Email address for scan notifications. Defaults to site admin email.', 'trailproof' )
+		);
+	}
+
+	public function render_notify_on_regression_field(): void {
+		$settings = $this->get_settings();
+		printf(
+			'<label><input type="checkbox" name="%1$s[notify_on_regression]" value="1" %2$s> %3$s</label>
+			<p class="description">%4$s</p>',
+			esc_attr( self::OPTION_KEY ),
+			checked( $settings['notify_on_regression'], true, false ),
+			esc_html__( 'Send an email when a scheduled scan detects accessibility regressions', 'trailproof' ),
+			esc_html__( 'Requires a scan schedule other than "Off".', 'trailproof' )
+		);
+	}
+
 	public function sanitize_settings( mixed $input ): array {
 		$clean = $this->defaults();
 
@@ -158,9 +198,20 @@ class SettingsPage {
 		if ( '' !== $submitted_key ) {
 			$clean['wave_api_key'] = substr( $submitted_key, 0, 256 );
 		} else {
-			$existing            = (array) get_option( self::OPTION_KEY, [] );
+			$existing              = (array) get_option( self::OPTION_KEY, [] );
 			$clean['wave_api_key'] = $existing['wave_api_key'] ?? '';
 		}
+
+		$submitted_claude_key = sanitize_text_field( $input['claude_api_key'] ?? '' );
+		if ( '' !== $submitted_claude_key ) {
+			$clean['claude_api_key'] = substr( $submitted_claude_key, 0, 256 );
+		} else {
+			$existing                = (array) get_option( self::OPTION_KEY, [] );
+			$clean['claude_api_key'] = $existing['claude_api_key'] ?? '';
+		}
+
+		$clean['notification_email']   = sanitize_email( $input['notification_email'] ?? '' );
+		$clean['notify_on_regression'] = ! empty( $input['notify_on_regression'] );
 
 		return $clean;
 	}
@@ -171,12 +222,15 @@ class SettingsPage {
 
 	private function defaults(): array {
 		return [
-			'post_types'    => [ 'post', 'page' ],
-			'url_include'   => '',
-			'url_exclude'   => '',
-			'scan_schedule' => 'weekly',
-			'white_label'   => false,
-			'wave_api_key'  => '',
+			'post_types'           => [ 'post', 'page' ],
+			'url_include'          => '',
+			'url_exclude'          => '',
+			'scan_schedule'        => 'weekly',
+			'white_label'          => false,
+			'wave_api_key'         => '',
+			'claude_api_key'       => '',
+			'notification_email'   => '',
+			'notify_on_regression' => true,
 		];
 	}
 }
