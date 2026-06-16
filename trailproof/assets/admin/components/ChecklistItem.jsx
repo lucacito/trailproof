@@ -54,13 +54,15 @@ export default function ChecklistItem( { item, onUpdate } ) {
 		} }>
 			{/* Header row */}
 			<div
-				style={ { display: 'flex', alignItems: 'center', padding: '10px 14px', gap: 12, cursor: 'pointer' } }
+				style={ { padding: '10px 14px', cursor: 'pointer' } }
 				onClick={ () => setExpanded( ! expanded ) }
 			>
-				<StatusBadge meta={ statusMeta } />
-				<span style={ { flex: 1, fontWeight: 500, fontSize: 13 } }>{ item.description }</span>
-				<span style={ { color: '#888', fontSize: 11 } }>WCAG { item.wcag_sc }</span>
-				<span style={ { color: '#888', fontSize: 12 } }>{ expanded ? '▲' : '▼' }</span>
+				<div style={ { display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 } }>
+					<StatusBadge meta={ statusMeta } />
+					<span style={ { marginLeft: 'auto', fontSize: 11, color: '#888', whiteSpace: 'nowrap' } }>WCAG { item.wcag_sc }</span>
+					<span style={ { color: '#888', fontSize: 12 } }>{ expanded ? '▲' : '▼' }</span>
+				</div>
+				<span style={ { fontWeight: 500, fontSize: 13 } }>{ item.description }</span>
 			</div>
 
 			{/* Expanded body */}

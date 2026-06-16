@@ -28,12 +28,12 @@ const IconCheck     = () => <svg width="10" height="10" viewBox="0 0 10 10" fill
 
 const NAV = [
 	{ id: 'dashboard',    label: __( 'Overview',       'trailproof' ), Icon: IconOverview  },
-	{ id: 'scan',         label: __( 'Scan Site',      'trailproof' ), Icon: IconScan      },
-	{ id: 'worklist',     label: __( 'Fix Issues',     'trailproof' ), Icon: IconFix       },
-	{ id: 'decisions',    label: __( 'Decisions',      'trailproof' ), Icon: IconDecisions },
-	{ id: 'checklist',    label: __( 'Checklist',      'trailproof' ), Icon: IconChecklist },
-	{ id: 'statement',    label: __( 'Statement',      'trailproof' ), Icon: IconStatement },
-	{ id: 'reports',      label: __( 'Reports',        'trailproof' ), Icon: IconReports   },
+	{ id: 'scan',         label: __( 'Scan Site',      'trailproof' ), Icon: IconScan,      step: 1 },
+	{ id: 'worklist',     label: __( 'Fix Issues',     'trailproof' ), Icon: IconFix,       step: 2 },
+	{ id: 'decisions',    label: __( 'Decisions',      'trailproof' ), Icon: IconDecisions, step: 3 },
+	{ id: 'checklist',    label: __( 'Checklist',      'trailproof' ), Icon: IconChecklist, step: 4 },
+	{ id: 'statement',    label: __( 'Statement',      'trailproof' ), Icon: IconStatement, step: 5 },
+	{ id: 'reports',      label: __( 'Reports',        'trailproof' ), Icon: IconReports,   step: 6 },
 	{ id: 'clientPortal', label: __( 'Client Portal',  'trailproof' ), Icon: IconPortal    },
 ];
 
@@ -93,16 +93,85 @@ function SidebarFooter( { status } ) {
 
 const whiteLabel = !! window.trailproofData?.whiteLabel;
 
+function NavButton( { id, label, Icon, step, active, done, navigate } ) {
+	return (
+		<button
+			onClick={ () => navigate( id ) }
+			aria-current={ active ? 'page' : undefined }
+			style={ {
+				display:    'flex',
+				alignItems: 'center',
+				gap:        9,
+				width:      '100%',
+				padding:    '8px 14px 8px 12px',
+				background: active ? 'rgba(255,255,255,0.1)' : 'none',
+				border:     'none',
+				borderLeft: `3px solid ${ active ? '#5B9CF6' : 'transparent' }`,
+				color:      active ? '#fff' : 'rgba(255,255,255,0.55)',
+				fontSize:   13,
+				fontWeight: active ? 600 : 400,
+				cursor:     'pointer',
+				textAlign:  'left',
+				lineHeight: 1,
+			} }
+		>
+			{ step ? (
+				<span style={ {
+					width:          16,
+					height:         16,
+					borderRadius:   '50%',
+					flexShrink:     0,
+					background:     done ? '#22c55e' : active ? '#5B9CF6' : 'rgba(255,255,255,0.12)',
+					color:          '#fff',
+					fontSize:       9,
+					fontWeight:     700,
+					display:        'flex',
+					alignItems:     'center',
+					justifyContent: 'center',
+				} }>
+					{ done ? '✓' : step }
+				</span>
+			) : (
+				<Icon />
+			) }
+			<span style={ { flex: 1 } }>{ label }</span>
+		</button>
+	);
+}
+
+function SectionLabel( { children } ) {
+	return (
+		<div style={ {
+			padding:       '10px 15px 3px',
+			fontSize:      9,
+			fontWeight:    700,
+			color:         'rgba(255,255,255,0.28)',
+			letterSpacing: '0.1em',
+			textTransform: 'uppercase',
+		} }>
+			{ children }
+		</div>
+	);
+}
+
+function NavDivider() {
+	return <div style={ { height: 1, background: 'rgba(255,255,255,0.07)', margin: '6px 0' } } />;
+}
+
 function Sidebar( { page, navigate, status } ) {
+	const workflow    = NAV.filter( n => n.step );
+	const utilBefore  = NAV.filter( n => ! n.step && n.id !== 'clientPortal' );
+	const utilAfter   = NAV.filter( n => n.id === 'clientPortal' );
+
 	return (
 		<aside style={ {
-			width:          220,
-			background:     '#1B2B4B',
-			flexShrink:     0,
-			display:        'flex',
-			flexDirection:  'column',
-			boxShadow:      '2px 0 8px rgba(0,0,0,0.15)',
-			zIndex:         1,
+			width:         220,
+			background:    '#1B2B4B',
+			flexShrink:    0,
+			display:       'flex',
+			flexDirection: 'column',
+			boxShadow:     '2px 0 8px rgba(0,0,0,0.15)',
+			zIndex:        1,
 		} }>
 			{/* Brand */}
 			{ ! whiteLabel && (
@@ -112,39 +181,31 @@ function Sidebar( { page, navigate, status } ) {
 				</div>
 			) }
 
-			{/* Navigation */}
-			<nav aria-label={ __( 'Trailproof navigation', 'trailproof' ) } style={ { flex: 1, paddingTop: 6, paddingBottom: 6 } }>
-				{ NAV.map( ( { id, label, Icon } ) => {
-					const active = page === id;
-					const done   = isStepDone( id, status );
-					return (
-						<button
-							key={ id }
-							onClick={ () => navigate( id ) }
-							aria-current={ active ? 'page' : undefined }
-							style={ {
-								display:     'flex',
-								alignItems:  'center',
-								gap:         10,
-								width:       '100%',
-								padding:     '9px 16px 9px 15px',
-								background:  active ? 'rgba(255,255,255,0.1)' : 'none',
-								border:      'none',
-								borderLeft:  `3px solid ${ active ? '#5B9CF6' : 'transparent' }`,
-								color:       active ? '#fff' : 'rgba(255,255,255,0.55)',
-								fontSize:    13,
-								fontWeight:  active ? 600 : 400,
-								cursor:      'pointer',
-								textAlign:   'left',
-								lineHeight:  1,
-							} }
-						>
-							<Icon />
-							<span style={ { flex: 1 } }>{ label }</span>
-							{ done && ! active && <IconCheck /> }
-						</button>
-					);
-				} ) }
+			<nav aria-label={ __( 'Trailproof navigation', 'trailproof' ) } style={ { flex: 1, paddingTop: 4, paddingBottom: 4 } }>
+
+				{/* Utility: Overview */}
+				{ utilBefore.map( ( { id, label, Icon } ) => (
+					<NavButton key={ id } id={ id } label={ label } Icon={ Icon }
+						active={ page === id } done={ isStepDone( id, status ) } navigate={ navigate } />
+				) ) }
+
+				<NavDivider />
+				<SectionLabel>{ __( 'Workflow', 'trailproof' ) }</SectionLabel>
+
+				{/* Numbered workflow steps */}
+				{ workflow.map( ( { id, label, Icon, step } ) => (
+					<NavButton key={ id } id={ id } label={ label } Icon={ Icon } step={ step }
+						active={ page === id } done={ isStepDone( id, status ) } navigate={ navigate } />
+				) ) }
+
+				<NavDivider />
+
+				{/* Utility: Client Portal */}
+				{ utilAfter.map( ( { id, label, Icon } ) => (
+					<NavButton key={ id } id={ id } label={ label } Icon={ Icon }
+						active={ page === id } done={ isStepDone( id, status ) } navigate={ navigate } />
+				) ) }
+
 			</nav>
 
 			<SidebarFooter status={ status } />
@@ -227,7 +288,7 @@ export default function App() {
 			<div style={ { flex: 1, display: 'flex', flexDirection: 'column', background: '#F4F6F9', minWidth: 0, overflow: 'hidden' } }>
 				<TopBar page={ page } status={ siteStatus } navigate={ setPage } />
 
-				<div style={ { flex: 1, padding: '24px', overflowY: 'auto' } }>
+				<div style={ { flex: 1, padding: '24px', overflowY: 'auto', overflowX: 'hidden' } }>
 					<Page navigate={ setPage } siteStatus={ siteStatus } refreshStatus={ refreshStatus } />
 				</div>
 			</div>

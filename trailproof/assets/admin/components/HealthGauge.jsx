@@ -1,6 +1,15 @@
 import { useState, useEffect, useRef } from '@wordpress/element';
 import { __ } from '@wordpress/i18n';
 
+// Grade derived from remediation score — exported so other components can use it
+export function getGrade( score ) {
+	if ( score >= 90 ) return { letter: 'A', label: __( 'Excellent',         'trailproof' ), color: '#16A34A', nextGrade: null, nextAt: null };
+	if ( score >= 75 ) return { letter: 'B', label: __( 'Strong',            'trailproof' ), color: '#2563EB', nextGrade: 'A',  nextAt: 90  };
+	if ( score >= 50 ) return { letter: 'C', label: __( 'Making progress',   'trailproof' ), color: '#D97706', nextGrade: 'B',  nextAt: 75  };
+	if ( score >= 25 ) return { letter: 'D', label: __( 'Needs improvement', 'trailproof' ), color: '#C2410C', nextGrade: 'C',  nextAt: 50  };
+	return                    { letter: 'F', label: __( 'Needs attention',   'trailproof' ), color: '#DC2626', nextGrade: 'D',  nextAt: 25  };
+}
+
 const RADIUS = 54;
 const CIRCUMFERENCE = 2 * Math.PI * RADIUS;
 
@@ -132,13 +141,7 @@ export default function HealthGauge( { healthScore } ) {
 
 	const { score, band, delta, components } = healthScore;
 	const { key: bandKey, label: bandLabel, color: bandColor } = band;
-
-	const BAND_ICONS = {
-		excellent:   '★',
-		strong:      '↑',
-		in_progress: '→',
-		needs_work:  '!',
-	};
+	const grade = getGrade( score );
 
 	return (
 		<div style={ {
@@ -150,19 +153,41 @@ export default function HealthGauge( { healthScore } ) {
 		} }>
 			<div style={ { display: 'flex', gap: 32, alignItems: 'flex-start', flexWrap: 'wrap' } }>
 
-				{/* Ring + band */}
+				{/* Ring + grade badge */}
 				<div style={ { minWidth: 160, textAlign: 'center' } }>
 					<Ring score={ score } color={ bandColor } />
 
-					{/* Band label with icon (color is NOT the only indicator) */}
-					<div style={ { marginTop: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5 } }>
-						<span
-							style={ { fontWeight: 700, fontSize: 15, color: bandColor } }
-							aria-label={ bandLabel }
-						>
-							{ BAND_ICONS[ bandKey ] } { bandLabel }
-						</span>
+					{/* Grade badge */}
+					<div style={ { marginTop: 10, display: 'flex', justifyContent: 'center' } }>
+						<div style={ {
+							display:      'inline-flex',
+							alignItems:   'center',
+							gap:          8,
+							background:   bandColor + '18',
+							border:       `1px solid ${ bandColor }40`,
+							borderRadius: 8,
+							padding:      '5px 14px',
+						} }>
+							<span style={ { fontSize: 24, fontWeight: 800, color: bandColor, lineHeight: 1 } }
+								aria-label={ `${ __( 'Accessibility grade', 'trailproof' ) } ${ grade.letter }` }
+							>
+								{ grade.letter }
+							</span>
+							<div style={ { textAlign: 'left' } }>
+								<div style={ { fontSize: 10, fontWeight: 700, color: bandColor, textTransform: 'uppercase', letterSpacing: '0.08em' } }>
+									{ __( 'Grade', 'trailproof' ) }
+								</div>
+								<div style={ { fontSize: 11, color: '#64748B' } }>{ grade.label }</div>
+							</div>
+						</div>
 					</div>
+
+					{/* Points to next grade */}
+					{ grade.nextGrade && (
+						<div style={ { fontSize: 11, color: '#94A3B8', marginTop: 5 } }>
+							{ grade.nextAt - score }{ __( ' points to Grade ', 'trailproof' ) }{ grade.nextGrade }
+						</div>
+					) }
 
 					{/* Delta */}
 					{ delta !== null && delta !== undefined && (
@@ -180,7 +205,7 @@ export default function HealthGauge( { healthScore } ) {
 				{/* Component bars */}
 				<div style={ { flex: 1, minWidth: 220 } }>
 					<p style={ { fontSize: 13, fontWeight: 600, color: '#1d2327', marginTop: 0, marginBottom: 14 } }>
-						{ __( 'Score breakdown', 'trailproof' ) }
+						{ __( 'Remediation progress', 'trailproof' ) }
 					</p>
 					<ComponentBar
 						label={ __( 'Safe fixes applied', 'trailproof' ) }

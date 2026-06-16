@@ -6,6 +6,80 @@ import StatusBadge, { groupStatus } from '../components/StatusBadge';
 import DecisionScreen from '../components/DecisionScreen';
 import IssueDetailPanel from '../components/IssueDetailPanel';
 
+// ─── Quick-fix banner ─────────────────────────────────────────────────────────
+
+function WorklistQuickFixBanner( { groups, onApplyAll, saving } ) {
+	const fixable = groups.filter( g => g.bucket === 'A' && g.open_count > 0 && ! RULES_NEEDING_INPUT_CHECK[ g.rule_id ] );
+	if ( fixable.length === 0 ) return null;
+
+	const needsInputGroups = groups.filter( g => g.bucket === 'A' && g.open_count > 0 && RULES_NEEDING_INPUT_CHECK[ g.rule_id ] );
+
+	return (
+		<div style={ {
+			background:   '#fff',
+			border:       '1px solid #E8ECF2',
+			borderLeft:   '4px solid #16A34A',
+			borderRadius: 8,
+			boxShadow:    '0 1px 3px rgba(0,0,0,0.08)',
+			padding:      '16px 20px',
+			marginBottom: 20,
+		} }>
+			<div style={ { display: 'flex', alignItems: 'flex-start', gap: 14 } }>
+				<span style={ { fontSize: 22, lineHeight: 1, flexShrink: 0, marginTop: 1 } } aria-hidden="true">⚡</span>
+				<div style={ { flex: 1 } }>
+					<div style={ { fontSize: 14, fontWeight: 700, color: '#1A2742', marginBottom: 4 } }>
+						{ fixable.length }{ ' ' }
+						{ fixable.length === 1
+							? __( 'accessibility improvement ready to apply automatically', 'trailproof' )
+							: __( 'accessibility improvements ready to apply automatically', 'trailproof' )
+						}
+					</div>
+					<p style={ { fontSize: 13, color: '#475569', margin: '0 0 10px', lineHeight: 1.5 } }>
+						{ __( 'TrailProof can safely apply these without changing your saved content. All changes are reversible.', 'trailproof' ) }
+					</p>
+					<div style={ { display: 'flex', flexDirection: 'column', gap: 3, marginBottom: 12 } }>
+						{ fixable.map( g => (
+							<div key={ g.rule_id } style={ { display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: '#475569' } }>
+								<span style={ { color: '#16A34A', fontWeight: 700, fontSize: 11, flexShrink: 0 } } aria-hidden="true">✓</span>
+								{ g.description || g.rule_id }
+								<span style={ { fontSize: 11, color: '#94A3B8' } }>({ g.open_count } { g.open_count === 1 ? __( 'instance', 'trailproof' ) : __( 'instances', 'trailproof' ) })</span>
+							</div>
+						) ) }
+						{ needsInputGroups.length > 0 && (
+							<div style={ { fontSize: 11, color: '#94A3B8', marginTop: 4 } }>
+								{ needsInputGroups.length }{ ' ' }
+								{ __( 'improvement(s) need your input and are listed below.', 'trailproof' ) }
+							</div>
+						) }
+					</div>
+					<div style={ { display: 'flex', alignItems: 'center', gap: 12 } }>
+						<button
+							className="button button-primary"
+							onClick={ onApplyAll }
+							disabled={ saving }
+							style={ { fontSize: 12 } }
+						>
+							{ saving ? __( 'Applying…', 'trailproof' ) : __( 'Apply all fixes', 'trailproof' ) }
+						</button>
+						<span style={ { fontSize: 11, color: '#94A3B8' } }>
+							{ __( 'Each fix can be undone at any time', 'trailproof' ) }
+						</span>
+					</div>
+				</div>
+			</div>
+		</div>
+	);
+}
+
+// Rules that need human-authored text before a Bucket A fix can be applied
+// (separate const for the banner check — avoids forward-reference issue)
+const RULES_NEEDING_INPUT_CHECK = {
+	'link-name':   true,
+	'button-name': true,
+	'label':       true,
+	'frame-title': true,
+};
+
 // Rules that need human-authored text before a Bucket A fix can be applied
 const RULES_NEEDING_INPUT = {
 	'link-name':   { transform_type: 'rewrite_link_text', field: 'text',       label: 'Accessible link name',   help: 'A clear, descriptive name for this link.' },
@@ -114,11 +188,11 @@ function GroupAction( { group, status, saving, onApplyGroup, onDecide, onApplyMo
 				disabled={ saving }
 				onClick={ () => needsInput ? onApplyModal( group ) : onApplyGroup( group ) }
 				title={ needsInput
-					? 'Enter a value and apply to all open instances'
-					: 'Apply the automatic fix to all open instances on this site. You can undo anytime.'
+					? 'Enter a value to apply this improvement to all open instances'
+					: 'Apply this improvement to all open instances on this site. You can undo anytime.'
 				}
 			>
-				{ __( 'Apply fix', 'trailproof' ) }
+				{ __( 'Apply improvement', 'trailproof' ) }
 			</Button>
 		);
 	}
@@ -203,7 +277,7 @@ function InstanceAction( { issue, saving, onApply, onDecide, onApplyModal } ) {
 				variant="primary" isSmall disabled={ saving }
 				onClick={ () => needsInput ? onApplyModal( issue ) : onApply( issue ) }
 			>
-				{ __( 'Apply fix', 'trailproof' ) }
+				{ __( 'Apply improvement', 'trailproof' ) }
 			</Button>
 		);
 	}
@@ -283,6 +357,39 @@ export default function Worklist( { navigate } ) {
 			if ( g.rule_id !== rule_id ) return g;
 			return { ...g, open_count: Math.max( 0, g.open_count - 1 ), fixed_count: g.fixed_count + 1 };
 		} ) );
+	}
+
+	// Apply fixes for all auto-fixable (non-input-requiring) bucket A groups in one sweep
+	async function applyAllFixes() {
+		const fixableGroups = groups.filter(
+			g => g.bucket === 'A' && g.open_count > 0 && ! RULES_NEEDING_INPUT[ g.rule_id ]
+		);
+		if ( fixableGroups.length === 0 ) return;
+		setSaving( true );
+		setError( null );
+		setSuccess( null );
+		let totalFixed = 0;
+		try {
+			for ( const group of fixableGroups ) {
+				const instances = await apiFetch( {
+					path: `/trailproof/v1/issues?rule_id=${ encodeURIComponent( group.rule_id ) }&status=open&per_page=200`,
+				} );
+				for ( const issue of instances ) {
+					await apiFetch( {
+						path:   `/trailproof/v1/issues/${ issue.id }/decide`,
+						method: 'POST',
+						data:   { action: 'apply', transform_type: autoTransformType( group.rule_id ), payload: {} },
+					} );
+					totalFixed++;
+				}
+				markGroupFixed( group.rule_id );
+			}
+			setSuccess( `${ totalFixed } ${ __( 'accessibility improvements applied. All changes are reversible.', 'trailproof' ) }` );
+		} catch ( err ) {
+			setError( err?.message || __( 'Failed to apply some fixes.', 'trailproof' ) );
+		} finally {
+			setSaving( false );
+		}
 	}
 
 	async function applyAutoFix( issue ) {
@@ -403,15 +510,6 @@ export default function Worklist( { navigate } ) {
 
 	return (
 		<div>
-			{ ! loading && (
-				<p style={ { margin: '0 0 16px', color: '#64748B', fontSize: 13 } }>
-					{ openCount > 0
-						? `${ openCount } problem ${ openCount === 1 ? 'type needs' : 'types need' } attention — click the action button on any row to fix or review it`
-						: __( 'Nothing open — great work! Run a scan to check for new issues.', 'trailproof' )
-					}
-				</p>
-			) }
-
 			{ successMsg && (
 				<Notice status="success" isDismissible onRemove={ () => setSuccess( null ) } style={ { marginBottom: 12 } }>
 					{ successMsg }
@@ -421,6 +519,21 @@ export default function Worklist( { navigate } ) {
 				<Notice status="error" isDismissible onRemove={ () => setError( null ) } style={ { marginBottom: 12 } }>
 					{ error }
 				</Notice>
+			) }
+
+			{/* Quick-fix banner: shown when bucket A auto-fixable issues exist */}
+			{ ! loading && (
+				<WorklistQuickFixBanner
+					groups={ groups }
+					onApplyAll={ applyAllFixes }
+					saving={ saving }
+				/>
+			) }
+
+			{ ! loading && openCount === 0 && (
+				<p style={ { margin: '0 0 16px', color: '#64748B', fontSize: 13 } }>
+					{ __( 'Nothing open — great work! Run a scan to check for new issues.', 'trailproof' ) }
+				</p>
 			) }
 
 			{ /* Filters */ }
@@ -451,10 +564,10 @@ export default function Worklist( { navigate } ) {
 						<tr>
 							<th style={ { width: 28 } }></th>
 							<th style={ { width: 90 } }>{ __( 'Impact', 'trailproof' ) }</th>
-							<th>{ __( 'Problem', 'trailproof' ) }</th>
+							<th>{ __( 'Improvement', 'trailproof' ) }</th>
 							<th style={ { width: 130 } }>{ __( 'Fix type', 'trailproof' ) }</th>
 							<th style={ { width: 130 } }>{ __( 'Status', 'trailproof' ) }</th>
-							<th style={ { width: 140 } }>{ __( 'Action', 'trailproof' ) }</th>
+							<th style={ { width: 140 } }>{ __( 'Next step', 'trailproof' ) }</th>
 						</tr>
 					</thead>
 					<tbody>
@@ -513,7 +626,7 @@ export default function Worklist( { navigate } ) {
 			{ /* Modal for fixes that need a text value */ }
 			{ applyModal && (
 				<Modal
-					title={ __( 'Apply fix', 'trailproof' ) }
+					title={ __( 'Apply improvement', 'trailproof' ) }
 					onRequestClose={ () => setApplyModal( null ) }
 				>
 					<p style={ { fontSize: 13, color: '#50575e', marginTop: 0 } }>
@@ -529,14 +642,14 @@ export default function Worklist( { navigate } ) {
 					{ error && <Notice status="error" isDismissible={ false }>{ error }</Notice> }
 					<div style={ { display: 'flex', gap: 8, marginTop: 12 } }>
 						<Button variant="primary" onClick={ submitModal } disabled={ saving }>
-							{ saving ? __( 'Applying…', 'trailproof' ) : __( 'Apply fix', 'trailproof' ) }
+							{ saving ? __( 'Applying…', 'trailproof' ) : __( 'Apply improvement', 'trailproof' ) }
 						</Button>
 						<Button variant="secondary" onClick={ () => setApplyModal( null ) } disabled={ saving }>
 							{ __( 'Cancel', 'trailproof' ) }
 						</Button>
 					</div>
 					<p style={ { fontSize: 11, color: '#646970', marginTop: 12 } }>
-						{ __( 'This fix is applied at render time and does not change your saved content. You can undo it anytime.', 'trailproof' ) }
+						{ __( 'This improvement is applied at render time and does not change your saved content. You can undo it anytime.', 'trailproof' ) }
 					</p>
 				</Modal>
 			) }
@@ -599,11 +712,17 @@ function GroupDecision( { group, onDone } ) {
 
 	return (
 		<div>
-			<div style={ { display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12 } }>
+			<div style={ { display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12, flexWrap: 'wrap' } }>
 				<button className="button button-small" onClick={ onDone }>← Back to worklist</button>
 				<span style={ { fontSize: 13, color: '#646970' } }>
 					{ `Deciding ${ index + 1 } of ${ total }: ${ group.description || group.rule_id }` }
 				</span>
+				{ current?.url && (
+					<span style={ { fontSize: 12, color: '#8c959f' } }>
+						{ ' — ' }
+						{ ( () => { try { return new URL( current.url ).pathname; } catch { return current.url; } } )() }
+					</span>
+				) }
 			</div>
 			<DecisionScreen
 				issue={ current }

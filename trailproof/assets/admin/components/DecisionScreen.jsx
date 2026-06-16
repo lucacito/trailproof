@@ -113,10 +113,28 @@ export default function DecisionScreen( { issue, onDecision, onCancel } ) {
 	const isLargeText = parseFloat( nodeData?.font_size ) >= 18 ||
 		( parseFloat( nodeData?.font_size ) >= 14 && nodeData?.font_weight >= 700 );
 
+	const pageUrl  = issue.url ? tryParseUrl( issue.url ) : null;
+	const pagePath = pageUrl ? pageUrl.pathname + ( pageUrl.search || '' ) : issue.url || null;
+
 	return (
 		<div style={ { background: '#fff', border: '1px solid #c3c4c7', borderRadius: 4, padding: 24, maxWidth: 760 } }>
 			{/* Header */}
 			<div style={ { marginBottom: 16 } }>
+				{ pagePath && (
+					<div style={ { display: 'inline-flex', alignItems: 'center', gap: 6, marginBottom: 8, background: '#F1F5F9', borderRadius: 4, padding: '3px 10px' } }>
+						<span style={ { fontSize: 11, color: '#64748B', fontWeight: 500 } }>
+							{ __( 'Page:', 'trailproof' ) }
+						</span>
+						<a
+							href={ issue.url }
+							target="_blank"
+							rel="noreferrer"
+							style={ { fontSize: 12, color: '#2563EB', fontWeight: 600, textDecoration: 'none', fontFamily: 'monospace' } }
+						>
+							{ pagePath }
+						</a>
+					</div>
+				) }
 				<div style={ { fontWeight: 700, fontSize: 16, color: '#1d2327', marginBottom: 6 } }>{ issue.description }</div>
 				<div style={ { fontSize: 12, color: '#8c959f' } }>
 					{ __( 'This issue needs your input — review the before/after below and choose what to do.', 'trailproof' ) }
@@ -379,4 +397,8 @@ function badgeStyle( bucket ) {
 function tryParse( v ) {
 	if ( ! v ) return null;
 	try { return JSON.parse( v ); } catch { return null; }
+}
+
+function tryParseUrl( v ) {
+	try { return new URL( v ); } catch { return null; }
 }
