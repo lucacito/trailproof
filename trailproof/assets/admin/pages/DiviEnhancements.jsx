@@ -69,15 +69,43 @@ function StatusBadge( { status, supported } ) {
 	if ( status === 'needs_review' && supported ) {
 		return (
 			<span style={ { display: 'inline-flex', alignItems: 'center', gap: 4, background: '#FFF7ED', color: '#C2410C', borderRadius: 99, padding: '3px 10px', fontSize: 11, fontWeight: 600 } }>
-				⚠ { __( 'Needs review', 'trailproof' ) }
+				⚠ { __( 'Needs fix', 'trailproof' ) }
 			</span>
 		);
 	}
-	// not detected or not yet supported
 	return (
 		<span style={ { display: 'inline-flex', alignItems: 'center', gap: 4, background: '#F8FAFC', color: '#94A3B8', borderRadius: 99, padding: '3px 10px', fontSize: 11, fontWeight: 600 } }>
 			{ supported ? __( 'Not detected', 'trailproof' ) : __( 'Coming soon', 'trailproof' ) }
 		</span>
+	);
+}
+
+// ─── Pages list ───────────────────────────────────────────────────────────────
+
+function PagesList( { pages } ) {
+	if ( ! pages?.length ) return null;
+
+	return (
+		<div style={ { marginTop: 14 } }>
+			<div style={ { fontSize: 11, fontWeight: 700, color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 8 } }>
+				{ __( 'Found on', 'trailproof' ) } { pages.length } { pages.length === 1 ? __( 'page', 'trailproof' ) : __( 'pages', 'trailproof' ) }
+			</div>
+			<div style={ { display: 'flex', flexDirection: 'column', gap: 4 } }>
+				{ pages.map( ( page, i ) => (
+					<div key={ i } style={ { display: 'flex', alignItems: 'center', gap: 6, fontSize: 12 } }>
+						<span style={ { color: '#CBD5E1', fontSize: 10 } } aria-hidden="true">↗</span>
+						<a
+							href={ page.url }
+							target="_blank"
+							rel="noopener noreferrer"
+							style={ { color: DIVI_BLUE, textDecoration: 'none', fontWeight: 500 } }
+						>
+							{ page.title || page.url }
+						</a>
+					</div>
+				) ) }
+			</div>
+		</div>
 	);
 }
 
@@ -140,9 +168,10 @@ function BeforeAfterView( { module } ) {
 
 // ─── Module card ──────────────────────────────────────────────────────────────
 
-function ModuleCard( { module } ) {
+function ModuleCard( { module, onFix, fixing } ) {
 	const [ expanded, setExpanded ] = useState( false );
-	const canExpand = module.detected || module.supported;
+	const canExpand  = module.detected || module.supported;
+	const canFix     = module.detected && module.supported && module.status === 'needs_review';
 
 	return (
 		<div style={ {
@@ -150,32 +179,69 @@ function ModuleCard( { module } ) {
 			overflow: 'hidden',
 			opacity:  module.status === 'not_detected' && ! module.supported ? 0.55 : 1,
 		} }>
-			<button
-				onClick={ () => canExpand && setExpanded( e => ! e ) }
-				style={ {
-					display:    'flex',
-					alignItems: 'center',
-					gap:        12,
-					width:      '100%',
-					padding:    '14px 16px',
-					background: 'none',
-					border:     'none',
-					cursor:     canExpand ? 'pointer' : 'default',
-					textAlign:  'left',
-				} }
-			>
-				<div style={ { flex: 1 } }>
-					<div style={ { fontSize: 13, fontWeight: 600, color: '#1A2742', marginBottom: 4 } }>
-						{ module.label }
+			<div style={ { display: 'flex', alignItems: 'center', gap: 12, padding: '14px 16px' } }>
+				{/* Clickable expand area */}
+				<button
+					onClick={ () => canExpand && setExpanded( e => ! e ) }
+					style={ {
+						display:    'flex',
+						alignItems: 'center',
+						gap:        12,
+						flex:       1,
+						background: 'none',
+						border:     'none',
+						cursor:     canExpand ? 'pointer' : 'default',
+						textAlign:  'left',
+						padding:    0,
+					} }
+				>
+					<div style={ { flex: 1 } }>
+						<div style={ { fontSize: 13, fontWeight: 600, color: '#1A2742', marginBottom: 4 } }>
+							{ module.label }
+						</div>
+						<div style={ { display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' } }>
+							<StatusBadge status={ module.status } supported={ module.supported } />
+							{ module.detected && module.page_count > 0 && (
+								<span style={ { fontSize: 11, color: '#94A3B8' } }>
+									{ module.page_count } { module.page_count === 1 ? __( 'page', 'trailproof' ) : __( 'pages', 'trailproof' ) }
+								</span>
+							) }
+						</div>
 					</div>
-					<StatusBadge status={ module.status } supported={ module.supported } />
-				</div>
-				{ canExpand && (
-					<span style={ { fontSize: 14, color: '#94A3B8', transform: expanded ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' } } aria-hidden="true">
-						▾
+					{ canExpand && (
+						<span style={ { fontSize: 14, color: '#94A3B8', transform: expanded ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s', flexShrink: 0 } } aria-hidden="true">
+							▾
+						</span>
+					) }
+				</button>
+
+				{/* Fix button — outside the expand button */}
+				{ canFix && (
+					<button
+						onClick={ onFix }
+						disabled={ fixing }
+						style={ {
+							background:   fixing ? '#E8ECF2' : '#1A2742',
+							color:        fixing ? '#94A3B8' : '#fff',
+							border:       'none',
+							borderRadius: 6,
+							padding:      '6px 14px',
+							fontSize:     11,
+							fontWeight:   600,
+							cursor:       fixing ? 'wait' : 'pointer',
+							flexShrink:   0,
+							transition:   'background 0.15s',
+						} }
+					>
+						{ fixing ? __( 'Fixing…', 'trailproof' ) : __( 'Fix all →', 'trailproof' ) }
+					</button>
+				) }
+				{ module.status === 'optimized' && (
+					<span style={ { fontSize: 11, color: '#16A34A', fontWeight: 600, flexShrink: 0 } }>
+						✓ { __( 'Applied', 'trailproof' ) }
 					</span>
 				) }
-			</button>
+			</div>
 
 			{ expanded && (
 				<div style={ { padding: '0 16px 16px', borderTop: '1px solid #F1F5F9' } }>
@@ -194,6 +260,8 @@ function ModuleCard( { module } ) {
 							</div>
 						</div>
 					) }
+
+					<PagesList pages={ module.pages } />
 					<BeforeAfterView module={ module } />
 				</div>
 			) }
@@ -244,13 +312,113 @@ function HistorySection( { history } ) {
 	);
 }
 
+// ─── HTML report generator ────────────────────────────────────────────────────
+
+function buildHtmlReport( report ) {
+	const scoreColor = report.score >= 80 ? '#16A34A' : report.score >= 50 ? '#D97706' : '#DC2626';
+
+	const moduleRows = report.modules.map( m => {
+		const statusLabel = m.status === 'optimized' ? '✓ Optimized'
+			: m.status === 'needs_review'             ? '⚠ Needs attention'
+			: '— Not detected';
+		const statusColor = m.status === 'optimized' ? '#16A34A'
+			: m.status === 'needs_review'             ? '#D97706'
+			: '#94A3B8';
+		const enhancements = ( m.enhancements ?? [] ).map( e => `<li>${ e }</li>` ).join( '' );
+		return `<tr>
+			<td style="font-weight:600">${ m.label }</td>
+			<td style="color:${ statusColor };font-weight:600;white-space:nowrap">${ statusLabel }</td>
+			<td><ul style="margin:0;padding-left:16px">${ enhancements }</ul></td>
+		</tr>`;
+	} ).join( '' );
+
+	const generatedDate = new Date( report.generated_at ).toLocaleDateString( undefined, {
+		year: 'numeric', month: 'long', day: 'numeric',
+	} );
+
+	return `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Divi Accessibility Report — ${ report.site_name }</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif; color: #1A2742; background: #F8FAFC; }
+  .page { max-width: 820px; margin: 40px auto; padding: 0 24px 60px; }
+  .header { background: #004B9B; color: #fff; border-radius: 10px; padding: 32px 36px; margin-bottom: 28px; }
+  .header h1 { font-size: 22px; font-weight: 700; margin-bottom: 6px; }
+  .header .meta { font-size: 13px; opacity: 0.75; }
+  .stats { display: flex; gap: 14px; margin-bottom: 28px; }
+  .stat { flex: 1; background: #fff; border: 1px solid #E8ECF2; border-radius: 8px; padding: 18px 16px; text-align: center; }
+  .stat-val { font-size: 32px; font-weight: 700; line-height: 1; margin-bottom: 4px; }
+  .stat-lbl { font-size: 11px; color: #64748B; text-transform: uppercase; letter-spacing: 0.06em; }
+  .score-block { background: #fff; border: 1px solid #E8ECF2; border-radius: 8px; padding: 18px 24px; text-align: center; min-width: 120px; }
+  .score-num { font-size: 48px; font-weight: 700; line-height: 1; color: ${ scoreColor }; }
+  .score-lbl { font-size: 11px; color: #64748B; text-transform: uppercase; letter-spacing: 0.08em; margin-top: 4px; }
+  .section-title { font-size: 11px; font-weight: 700; color: #64748B; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 12px; }
+  table { width: 100%; border-collapse: collapse; background: #fff; border: 1px solid #E8ECF2; border-radius: 8px; overflow: hidden; margin-bottom: 28px; }
+  th { text-align: left; font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; color: #64748B; background: #F8FAFC; border-bottom: 1px solid #E8ECF2; padding: 10px 14px; }
+  td { padding: 12px 14px; border-bottom: 1px solid #F1F5F9; font-size: 13px; vertical-align: top; }
+  tr:last-child td { border-bottom: none; }
+  td li { margin-bottom: 3px; color: #475569; }
+  .footer { text-align: center; font-size: 11px; color: #94A3B8; padding-top: 20px; border-top: 1px solid #E8ECF2; }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <div class="header">
+    <h1>Divi Accessibility Report</h1>
+    <div class="meta">${ report.site_name } &middot; Generated ${ generatedDate } &middot; Divi ${ report.divi_version ?? 'detected' }</div>
+  </div>
+
+  <div class="stats">
+    <div class="stat">
+      <div class="stat-val">${ report.modules_analyzed }</div>
+      <div class="stat-lbl">Modules analyzed</div>
+    </div>
+    <div class="stat">
+      <div class="stat-val" style="color:#16A34A">${ report.automatic_enhancements }</div>
+      <div class="stat-lbl">Optimized</div>
+    </div>
+    <div class="stat">
+      <div class="stat-val" style="color:${ ( report.manual_recommendations ?? 0 ) > 0 ? '#D97706' : '#16A34A' }">${ report.manual_recommendations ?? 0 }</div>
+      <div class="stat-lbl">Needs attention</div>
+    </div>
+    <div class="score-block">
+      <div class="score-num">${ report.score ?? '—' }%</div>
+      <div class="score-lbl">Score</div>
+    </div>
+  </div>
+
+  <div class="section-title">Module status</div>
+  <table>
+    <thead>
+      <tr>
+        <th>Module</th>
+        <th>Status</th>
+        <th>Enhancements</th>
+      </tr>
+    </thead>
+    <tbody>${ moduleRows }</tbody>
+  </table>
+
+  <div class="footer">
+    Generated by <strong>TrailProof</strong> &middot; <a href="${ report.site_url }">${ report.site_url }</a>
+  </div>
+</div>
+</body>
+</html>`;
+}
+
 // ─── Report section ───────────────────────────────────────────────────────────
 
 function ReportSection( { data, generating, onGenerate } ) {
 	return (
 		<div style={ { ...card, padding: '20px 24px' } }>
 			<div style={ { fontSize: 12, fontWeight: 700, color: '#1A2742', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 12 } }>
-				{ __( 'Generate Divi Accessibility Report', 'trailproof' ) }
+				{ __( 'Download Accessibility Report', 'trailproof' ) }
 			</div>
 
 			{ data && (
@@ -270,7 +438,7 @@ function ReportSection( { data, generating, onGenerate } ) {
 			) }
 
 			<div style={ { fontSize: 12, color: '#64748B', marginBottom: 14, lineHeight: 1.6 } }>
-				{ __( 'Generate a report of Divi accessibility improvements for your records or to share with clients.', 'trailproof' ) }
+				{ __( 'Downloads a formatted HTML report of Divi accessibility improvements — ready to share with clients.', 'trailproof' ) }
 			</div>
 
 			<button
@@ -279,7 +447,7 @@ function ReportSection( { data, generating, onGenerate } ) {
 				onClick={ onGenerate }
 				disabled={ generating }
 			>
-				{ generating ? __( 'Generating…', 'trailproof' ) : __( 'Download Divi Report →', 'trailproof' ) }
+				{ generating ? __( 'Generating…', 'trailproof' ) : __( 'Download HTML Report →', 'trailproof' ) }
 			</button>
 		</div>
 	);
@@ -397,12 +565,14 @@ function TabBar( { tabs, active, onChange } ) {
 // ─── Main page ────────────────────────────────────────────────────────────────
 
 export default function DiviEnhancements() {
-	const [ data, setData ]           = useState( null );
-	const [ loading, setLoading ]     = useState( true );
-	const [ error, setError ]         = useState( null );
-	const [ tab, setTab ]             = useState( 'modules' );
+	const [ data, setData ]             = useState( null );
+	const [ loading, setLoading ]       = useState( true );
+	const [ error, setError ]           = useState( null );
+	const [ tab, setTab ]               = useState( 'modules' );
 	const [ refreshing, setRefreshing ] = useState( false );
 	const [ generating, setGenerating ] = useState( false );
+	const [ fixing, setFixing ]         = useState( {} ); // { moduleKey: bool }
+	const [ fixMsg, setFixMsg ]         = useState( null ); // { type: 'ok'|'err', text }
 
 	const fetchData = useCallback( () => {
 		setLoading( true );
@@ -422,18 +592,53 @@ export default function DiviEnhancements() {
 			.finally( () => setRefreshing( false ) );
 	}
 
+	async function handleFixModule( moduleKey ) {
+		setFixing( prev => ( { ...prev, [ moduleKey ]: true } ) );
+		setFixMsg( null );
+		try {
+			const ruleId = `divi-${ moduleKey }`;
+			const issues = await apiFetch( {
+				path: `/trailproof/v1/issues?rule_id=${ encodeURIComponent( ruleId ) }&status=open&per_page=200`,
+			} );
+
+			if ( ! issues?.length ) {
+				setFixMsg( { type: 'err', text: __( 'No open issues found for this module. Run a scan first.', 'trailproof' ) } );
+				return;
+			}
+
+			for ( const issue of issues ) {
+				await apiFetch( {
+					path:   `/trailproof/v1/issues/${ issue.id }/decide`,
+					method: 'POST',
+					data:   { action: 'apply', transform_type: 'widget_aria_pattern', payload: {} },
+				} );
+			}
+
+			setFixMsg( { type: 'ok', text: `${ issues.length } ${ __( 'fix(es) applied. Changes are reversible from the Fix Issues screen.', 'trailproof' ) }` } );
+
+			// Refresh analysis so status flips to optimized
+			setRefreshing( true );
+			apiFetch( { path: '/trailproof/v1/divi/analysis/refresh', method: 'POST' } )
+				.then( setData )
+				.catch( () => {} )
+				.finally( () => setRefreshing( false ) );
+		} catch ( err ) {
+			setFixMsg( { type: 'err', text: err?.message ?? __( 'Fix failed.', 'trailproof' ) } );
+		} finally {
+			setFixing( prev => ( { ...prev, [ moduleKey ]: false } ) );
+		}
+	}
+
 	function handleGenerateReport() {
 		setGenerating( true );
 		apiFetch( { path: '/trailproof/v1/divi/report' } )
 			.then( report => {
-				const blob = new Blob(
-					[ JSON.stringify( report, null, 2 ) ],
-					{ type: 'application/json' }
-				);
+				const html = buildHtmlReport( report );
+				const blob = new Blob( [ html ], { type: 'text/html' } );
 				const url  = URL.createObjectURL( blob );
 				const a    = document.createElement( 'a' );
 				a.href     = url;
-				a.download = `divi-accessibility-report-${ new Date().toISOString().slice( 0, 10 ) }.json`;
+				a.download = `divi-accessibility-report-${ new Date().toISOString().slice( 0, 10 ) }.html`;
 				a.click();
 				URL.revokeObjectURL( url );
 			} )
@@ -504,7 +709,7 @@ export default function DiviEnhancements() {
 				{ [
 					{ label: __( 'Modules analyzed',  'trailproof' ), value: data.modules_analyzed,     sub: __( 'Divi modules detected on site',     'trailproof' ) },
 					{ label: __( 'Optimized',         'trailproof' ), value: data.modules_optimized,    sub: __( 'Automatically improved by TrailProof', 'trailproof' ), color: '#16A34A' },
-					{ label: __( 'Needs review',      'trailproof' ), value: data.modules_needs_review, sub: __( 'Require attention',                  'trailproof' ), color: data.modules_needs_review > 0 ? '#D97706' : '#16A34A' },
+					{ label: __( 'Needs fix',         'trailproof' ), value: data.modules_needs_review, sub: __( 'Require attention',                  'trailproof' ), color: data.modules_needs_review > 0 ? '#D97706' : '#16A34A' },
 				].map( ( stat, i ) => (
 					<div key={ i } style={ { ...card, padding: '18px 20px' } }>
 						<div style={ { fontSize: 28, fontWeight: 700, color: stat.color ?? '#1A2742', lineHeight: 1, marginBottom: 4 } }>
@@ -525,13 +730,35 @@ export default function DiviEnhancements() {
 				</div>
 			</div>
 
+			{/* ── Fix feedback banner ────────────────────────────────────────── */}
+			{ fixMsg && (
+				<div style={ {
+					marginBottom: 16,
+					padding:      '10px 14px',
+					borderRadius: 6,
+					fontSize:     12,
+					background:   fixMsg.type === 'ok' ? '#F0FDF4' : '#FEF2F2',
+					color:        fixMsg.type === 'ok' ? '#15803D' : '#DC2626',
+					border:       `1px solid ${ fixMsg.type === 'ok' ? '#BBF7D0' : '#FECACA' }`,
+					display:      'flex',
+					alignItems:   'center',
+					justifyContent: 'space-between',
+					gap:          12,
+				} }>
+					{ fixMsg.text }
+					<button onClick={ () => setFixMsg( null ) } style={ { background: 'none', border: 'none', cursor: 'pointer', color: 'inherit', fontSize: 16, lineHeight: 1, flexShrink: 0 } }>
+						×
+					</button>
+				</div>
+			) }
+
 			{/* ── Tab content ────────────────────────────────────────────────── */}
 			<TabBar tabs={ TABS } active={ tab } onChange={ setTab } />
 
 			{ tab === 'modules' && (
 				<div>
 					<div style={ { fontSize: 12, fontWeight: 600, color: '#64748B', marginBottom: 14 } }>
-						{ __( 'Click a module to see what TrailProof improved and the technical details.', 'trailproof' ) }
+						{ __( 'Click a module to see what TrailProof improved. Use "Fix all →" to apply fixes without leaving this page.', 'trailproof' ) }
 					</div>
 
 					{ detectedModules.length > 0 && (
@@ -540,7 +767,14 @@ export default function DiviEnhancements() {
 								{ __( 'Detected on your site', 'trailproof' ) }
 							</div>
 							<div style={ { display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 20 } }>
-								{ detectedModules.map( m => <ModuleCard key={ m.key } module={ m } /> ) }
+								{ detectedModules.map( m => (
+									<ModuleCard
+										key={ m.key }
+										module={ m }
+										onFix={ () => handleFixModule( m.key ) }
+										fixing={ !! fixing[ m.key ] }
+									/>
+								) ) }
 							</div>
 						</>
 					) }
@@ -551,7 +785,14 @@ export default function DiviEnhancements() {
 								{ __( 'Available enhancements', 'trailproof' ) }
 							</div>
 							<div style={ { display: 'flex', flexDirection: 'column', gap: 8 } }>
-								{ data.modules.filter( m => ! m.detected ).map( m => <ModuleCard key={ m.key } module={ m } /> ) }
+								{ data.modules.filter( m => ! m.detected ).map( m => (
+									<ModuleCard
+										key={ m.key }
+										module={ m }
+										onFix={ () => handleFixModule( m.key ) }
+										fixing={ !! fixing[ m.key ] }
+									/>
+								) ) }
 							</div>
 						</>
 					) }
@@ -589,7 +830,7 @@ export default function DiviEnhancements() {
 					<ClientSummaryCard data={ data } />
 					{ ! data.modules_optimized && (
 						<p style={ { fontSize: 13, color: '#94A3B8', marginTop: 16 } }>
-							{ __( 'Apply Divi module fixes in the Fix Issues workflow to populate the client summary.', 'trailproof' ) }
+							{ __( 'Apply Divi module fixes to populate the client summary.', 'trailproof' ) }
 						</p>
 					) }
 				</div>

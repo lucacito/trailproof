@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from '@wordpress/element';
+import { useState, useEffect, useCallback, useMemo } from '@wordpress/element';
 import { __ } from '@wordpress/i18n';
 import apiFetch from '@wordpress/api-fetch';
 
@@ -26,6 +26,14 @@ const SITEWIDE_ENHANCEMENTS = [
 		wcag:  'WCAG 2.3.3',
 		desc:  __( 'Disables CSS animations and transitions for users who have enabled "Reduce Motion" in their OS accessibility settings.', 'trailproof' ),
 	},
+];
+
+const FONT_SIZE_OPTIONS = [
+	{ value: 0,  label: __( 'Default (theme-defined)',  'trailproof' ) },
+	{ value: 16, label: __( '16px — WCAG AA baseline',  'trailproof' ) },
+	{ value: 18, label: __( '18px — Recommended',       'trailproof' ) },
+	{ value: 20, label: __( '20px — Large text',        'trailproof' ) },
+	{ value: 22, label: __( '22px — Extra large',       'trailproof' ) },
 ];
 
 const card = {
@@ -101,24 +109,38 @@ export default function RemediationSettings() {
 	const [ resetError, setResetError ] = useState( null );
 	const [ confirmReset, setConfirmReset ] = useState( false );
 
-	const [ enhancements, setEnhancements ] = useState( {
+	const EMPTY_ENH = {
 		focus_style_enabled:    false,
 		focus_style_color:      '#0066CC',
 		touch_target_enabled:   false,
 		reduced_motion_enabled: false,
-	} );
-	const [ enhSaving, setEnhSaving ] = useState( {} );
+		base_font_size:         0,
+	};
+
+	const [ enhancements,      setEnhancements      ] = useState( EMPTY_ENH );
+	const [ savedEnhancements, setSavedEnhancements ] = useState( EMPTY_ENH );
+	const [ enhSaving, setEnhSaving ] = useState( false );
+	const [ enhSaved,  setEnhSaved  ] = useState( false );
+	const [ enhError,  setEnhError  ] = useState( null );
+
+	const isDirty = useMemo(
+		() => JSON.stringify( enhancements ) !== JSON.stringify( savedEnhancements ),
+		[ enhancements, savedEnhancements ]
+	);
 
 	useEffect( () => {
 		apiFetch( { path: '/trailproof/v1/settings' } )
 			.then( data => {
 				setEnabled( !! data.fixes_enabled );
-				setEnhancements( {
+				const fromServer = {
 					focus_style_enabled:    !! data.focus_style_enabled,
 					focus_style_color:      data.focus_style_color ?? '#0066CC',
 					touch_target_enabled:   !! data.touch_target_enabled,
 					reduced_motion_enabled: !! data.reduced_motion_enabled,
-				} );
+					base_font_size:         data.base_font_size ?? 0,
+				};
+				setEnhancements( fromServer );
+				setSavedEnhancements( fromServer );
 			} )
 			.catch( () => {} )
 			.finally( () => setLoading( false ) );
@@ -143,22 +165,29 @@ export default function RemediationSettings() {
 			.finally( () => setResetting( false ) );
 	}, [] );
 
-	const saveEnhancement = useCallback( ( patch ) => {
-		const key = Object.keys( patch )[ 0 ];
-		setEnhSaving( s => ( { ...s, [ key ]: true } ) );
-		apiFetch( { path: '/trailproof/v1/settings', method: 'PUT', data: patch } )
+	const saveAllEnhancements = useCallback( () => {
+		setEnhSaving( true );
+		setEnhError( null );
+		setEnhSaved( false );
+		apiFetch( { path: '/trailproof/v1/settings', method: 'PUT', data: enhancements } )
 			.then( data => {
-				setEnhancements( prev => ( {
-					...prev,
+				const committed = {
 					focus_style_enabled:    !! data.focus_style_enabled,
 					focus_style_color:      data.focus_style_color ?? '#0066CC',
 					touch_target_enabled:   !! data.touch_target_enabled,
 					reduced_motion_enabled: !! data.reduced_motion_enabled,
-				} ) );
+					base_font_size:         data.base_font_size ?? 0,
+				};
+				setEnhancements( committed );
+				setSavedEnhancements( committed );
+				setEnhSaved( true );
+				setTimeout( () => setEnhSaved( false ), 3000 );
 			} )
-			.catch( () => {} )
-			.finally( () => setEnhSaving( s => ( { ...s, [ key ]: false } ) ) );
-	}, [] );
+			.catch( err => {
+				setEnhError( err.message ?? __( 'Failed to save.', 'trailproof' ) );
+			} )
+			.finally( () => setEnhSaving( false ) );
+	}, [ enhancements ] );
 
 	const toggle = useCallback( () => {
 		const next = ! enabled;
@@ -279,9 +308,57 @@ export default function RemediationSettings() {
 					{ __( 'CSS-only improvements injected into every page. Each is independently toggleable and fully reversible.', 'trailproof' ) }
 				</p>
 				<div style={ { display: 'flex', flexDirection: 'column', gap: 12 } }>
+
+					{/* ── Base font size ─────────────────────────────────────── */}
+					{ ( () => {
+						const curSize = enhancements.base_font_size ?? 0;
+						const isOn    = curSize > 0;
+						return (
+							<div style={ {
+								display:      'flex',
+								alignItems:   'flex-start',
+								gap:          14,
+								padding:      '14px 16px',
+								borderRadius: 6,
+								background:   isOn ? '#F0FDF4' : '#F8FAFC',
+								border:       `1px solid ${ isOn ? '#BBF7D0' : '#E2E8F0' }`,
+								transition:   'background 0.15s, border-color 0.15s',
+							} }>
+								<span style={ { fontSize: 20, lineHeight: 1, marginTop: 1, flexShrink: 0 } } aria-hidden="true">🔤</span>
+								<div style={ { flex: 1, minWidth: 0 } }>
+									<div style={ { display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', marginBottom: 4 } }>
+										<span style={ { fontSize: 13, fontWeight: 700, color: '#1A2742' } }>{ __( 'Minimum Font Size', 'trailproof' ) }</span>
+										<span style={ {
+											fontSize: 10, fontWeight: 700, color: '#2563EB',
+											background: '#EFF6FF', border: '1px solid #BFDBFE',
+											borderRadius: 99, padding: '1px 7px',
+										} }>WCAG 1.4.4</span>
+									</div>
+									<p style={ { fontSize: 12, color: '#475569', margin: '0 0 10px', lineHeight: 1.5 } }>
+										{ __( 'Sets a minimum html font-size site-wide. Scales all rem-based text — including Divi\'s default typography. Useful when a theme ships with type smaller than 16px.', 'trailproof' ) }
+									</p>
+									<div style={ { display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' } }>
+										<label style={ { display: 'flex', alignItems: 'center', gap: 8, fontSize: 12, color: '#475569' } }>
+											{ __( 'Font size', 'trailproof' ) }
+											<select
+												value={ curSize }
+												disabled={ enhSaving }
+												onChange={ e => setEnhancements( prev => ( { ...prev, base_font_size: parseInt( e.target.value, 10 ) } ) ) }
+												style={ { fontSize: 12, border: '1px solid #CBD5E1', borderRadius: 4, padding: '4px 8px', background: '#fff', cursor: 'pointer' } }
+											>
+												{ FONT_SIZE_OPTIONS.map( opt => (
+													<option key={ opt.value } value={ opt.value }>{ opt.label }</option>
+												) ) }
+											</select>
+										</label>
+									</div>
+								</div>
+							</div>
+						);
+					} )() }
+
 					{ SITEWIDE_ENHANCEMENTS.map( enh => {
 						const isOn = enhancements[ enh.key ];
-						const isBusy = enhSaving[ enh.key ] || enhSaving[ enh.colorKey ];
 						return (
 							<div key={ enh.key } style={ {
 								display:      'flex',
@@ -308,15 +385,10 @@ export default function RemediationSettings() {
 										<button
 											className={ `button ${ isOn ? 'button-secondary' : 'button-primary' }` }
 											style={ { fontSize: 12 } }
-											disabled={ isBusy }
-											onClick={ () => saveEnhancement( { [ enh.key ]: ! isOn } ) }
+											disabled={ enhSaving }
+											onClick={ () => setEnhancements( prev => ( { ...prev, [ enh.key ]: ! isOn } ) ) }
 										>
-											{ isBusy
-												? __( 'Saving…', 'trailproof' )
-												: isOn
-													? __( 'Disable', 'trailproof' )
-													: __( 'Enable', 'trailproof' )
-											}
+											{ isOn ? __( 'Disable', 'trailproof' ) : __( 'Enable', 'trailproof' ) }
 										</button>
 										{ enh.hasColor && isOn && (
 											<label style={ { display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: '#475569' } }>
@@ -324,9 +396,8 @@ export default function RemediationSettings() {
 												<input
 													type="color"
 													value={ enhancements[ enh.colorKey ] ?? '#0066CC' }
-													disabled={ isBusy }
+													disabled={ enhSaving }
 													onChange={ e => setEnhancements( prev => ( { ...prev, [ enh.colorKey ]: e.target.value } ) ) }
-													onBlur={ e => saveEnhancement( { [ enh.colorKey ]: e.target.value } ) }
 													style={ { width: 32, height: 28, padding: 0, border: '1px solid #CBD5E1', borderRadius: 4, cursor: 'pointer' } }
 												/>
 											</label>
@@ -336,6 +407,31 @@ export default function RemediationSettings() {
 							</div>
 						);
 					} ) }
+				</div>
+
+				{/* Save button row */}
+				<div style={ { display: 'flex', alignItems: 'center', gap: 12, marginTop: 16, paddingTop: 16, borderTop: '1px solid #F1F5F9', flexWrap: 'wrap' } }>
+					<button
+						className="button button-primary"
+						onClick={ saveAllEnhancements }
+						disabled={ enhSaving || ! isDirty }
+						style={ { fontSize: 13 } }
+					>
+						{ enhSaving ? __( 'Saving…', 'trailproof' ) : __( 'Save enhancements', 'trailproof' ) }
+					</button>
+					{ isDirty && ! enhSaving && (
+						<span style={ { fontSize: 12, color: '#B45309' } }>
+							{ __( 'You have unsaved changes.', 'trailproof' ) }
+						</span>
+					) }
+					{ enhSaved && ! isDirty && (
+						<span style={ { fontSize: 12, color: '#15803D', fontWeight: 600 } }>
+							{ __( '✓ Saved', 'trailproof' ) }
+						</span>
+					) }
+					{ enhError && (
+						<span style={ { fontSize: 12, color: '#B91C1C' } }>{ enhError }</span>
+					) }
 				</div>
 			</div>
 

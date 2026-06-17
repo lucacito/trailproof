@@ -1,4 +1,4 @@
-import { useState } from '@wordpress/element';
+import { useState, useEffect } from '@wordpress/element';
 import { Button, TextareaControl } from '@wordpress/components';
 import apiFetch from '@wordpress/api-fetch';
 
@@ -23,6 +23,25 @@ export default function ChecklistItem( { item, onUpdate } ) {
 	const [ saving, setSaving ]       = useState( false );
 	const [ currentStatus, setCurrentStatus ] = useState( item.status || 'pending' );
 	const [ error, setError ]         = useState( null );
+	const [ relatedPages, setRelatedPages ]   = useState( null );
+
+	useEffect( () => {
+		if ( ! expanded || relatedPages !== null ) return;
+		apiFetch( { path: `/trailproof/v1/issues?wcag_sc=${ encodeURIComponent( item.wcag_sc ) }&status=open&per_page=50` } )
+			.then( ( issues ) => {
+				// Deduplicate by URL, count issues per page
+				const byUrl = {};
+				issues.forEach( ( iss ) => {
+					const key = iss.url;
+					if ( ! byUrl[ key ] ) {
+						byUrl[ key ] = { url: iss.url, title: iss.page_title || '', count: 0 };
+					}
+					byUrl[ key ].count++;
+				} );
+				setRelatedPages( Object.values( byUrl ) );
+			} )
+			.catch( () => setRelatedPages( [] ) );
+	}, [ expanded ] );
 
 	const statusMeta = STATUS_LABELS[ currentStatus ] || STATUS_LABELS.pending;
 
@@ -71,6 +90,41 @@ export default function ChecklistItem( { item, onUpdate } ) {
 					<p style={ { color: '#444', fontSize: 13, marginTop: 0, lineHeight: 1.6 } }>
 						{ item.guidance }
 					</p>
+
+					<div style={ { background: '#f8f9fa', border: '1px solid #e2e4e7', borderRadius: 3, padding: '8px 12px', marginBottom: 12 } }>
+						<p style={ { margin: '0 0 6px', fontSize: 11, fontWeight: 600, color: '#50575e', textTransform: 'uppercase', letterSpacing: '0.04em' } }>
+							Where to look — WCAG { item.wcag_sc }
+						</p>
+						{ relatedPages === null && (
+							<p style={ { margin: 0, fontSize: 12, color: '#888' } }>Loading…</p>
+						) }
+						{ relatedPages !== null && relatedPages.length === 0 && (
+							<p style={ { margin: 0, fontSize: 12, color: '#50575e', lineHeight: 1.5 } }>
+								No related automated findings on record. This criterion requires manual testing — visit your site, check it against the guidance above, then record your finding using Pass, Fail, N/A, or Defer below.
+							</p>
+						) }
+						{ relatedPages !== null && relatedPages.length > 0 && (
+							<>
+								<p style={ { margin: '0 0 6px', fontSize: 12, color: '#50575e' } }>
+									Automated scans flagged issues on these pages for the same criterion — start your manual review here:
+								</p>
+								<ul style={ { margin: '0 0 6px', padding: 0, listStyle: 'none' } }>
+									{ relatedPages.map( ( p ) => (
+										<li key={ p.url } style={ { fontSize: 12, marginBottom: 3 } }>
+											<a href={ p.url } target="_blank" rel="noreferrer" style={ { color: '#2271b1' } }>
+												{ p.title || p.url }
+											</a>
+											{ ' ' }
+											<span style={ { color: '#888' } }>({ p.count } { p.count === 1 ? 'related issue' : 'related issues' })</span>
+										</li>
+									) ) }
+								</ul>
+								<p style={ { margin: 0, fontSize: 11, color: '#888', fontStyle: 'italic' } }>
+									After reviewing, record your finding below.
+								</p>
+							</>
+						) }
+					</div>
 
 					<TextareaControl
 						label="Note"

@@ -54,6 +54,7 @@ class SettingsRoutes {
 			'focus_style_color'      => $s['focus_style_color'] ?? '#0066CC',
 			'touch_target_enabled'   => (bool) ( $s['touch_target_enabled'] ?? false ),
 			'reduced_motion_enabled' => (bool) ( $s['reduced_motion_enabled'] ?? false ),
+			'base_font_size'         => (int) ( $s['base_font_size'] ?? 0 ),
 		], 200 );
 	}
 
@@ -88,6 +89,10 @@ class SettingsRoutes {
 		}
 		if ( array_key_exists( 'reduced_motion_enabled', $body ) ) {
 			$current['reduced_motion_enabled'] = (bool) $body['reduced_motion_enabled'];
+		}
+		if ( array_key_exists( 'base_font_size', $body ) ) {
+			$size = (int) $body['base_font_size'];
+			$current['base_font_size'] = in_array( $size, [ 0, 16, 18, 20, 22 ], true ) ? $size : 0;
 		}
 
 		update_option( 'trailproof_settings', $current );

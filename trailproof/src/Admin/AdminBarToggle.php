@@ -4,7 +4,21 @@ declare(strict_types=1);
 
 namespace Trailproof\Admin;
 
+/**
+ * Admin-bar toggle for TrailProof front-end preview.
+ *
+ * ON/OFF state is stored in localStorage ('tp_preview': omitted = on, 'off' = off).
+ * Nothing is written to the database — this is a per-session, per-browser toggle.
+ *
+ * When toggled OFF the script adds the class 'trailproof-preview-off' to <body>,
+ * which the inline CSS uses to hide TrailProof-injected elements (skip links,
+ * sitewide style blocks). This lets the admin compare before/after without a reload.
+ *
+ * The actual fixes_enabled backend setting lives in Remediation Settings.
+ */
 class AdminBarToggle {
+
+	private const LS_KEY = 'tp_preview'; // localStorage key — omitted | 'off'
 
 	public function register(): void {
 		add_action( 'admin_bar_menu',        [ $this, 'add_node' ], 999 );
@@ -14,48 +28,85 @@ class AdminBarToggle {
 		add_action( 'admin_head',            [ $this, 'inline_styles' ] );
 	}
 
+	// ── Admin bar node ───────────────────────────────────────────────────────
+
 	public function add_node( \WP_Admin_Bar $bar ): void {
 		if ( ! current_user_can( 'manage_options' ) ) {
 			return;
 		}
 
-		$settings = (array) get_option( 'trailproof_settings', [] );
-		$enabled  = (bool) ( $settings['fixes_enabled'] ?? true );
-
+		// JS updates the pill from localStorage on DOMContentLoaded.
+		// PHP renders the "ON" default so there is no layout shift without JS.
 		$bar->add_node( [
 			'id'    => 'trailproof-toggle',
 			'title' => sprintf(
 				'<span class="tp-ab-wrap">
-					<span class="tp-ab-icon" aria-hidden="true">%s</span>
 					<span class="tp-ab-label">%s</span>
-					<span class="tp-ab-pill tp-ab-pill--%s">%s</span>
+					<span class="tp-ab-pill tp-ab-pill--on">ON</span>
 				</span>',
-				$enabled ? '&#128737;' : '&#9208;',
-				esc_html__( 'TrailProof', 'trailproof' ),
-				$enabled ? 'on' : 'off',
-				$enabled ? esc_html__( 'ON', 'trailproof' ) : esc_html__( 'OFF', 'trailproof' )
+				esc_html__( 'TrailProof', 'trailproof' )
 			),
-			// Fallback href (no-JS): goes to Remediation Settings page
-			'href'  => admin_url( 'admin.php?page=trailproof#remediation' ),
-			'meta'  => [
-				'title' => $enabled
-					? esc_attr__( 'TrailProof fixes are ON — click to disable', 'trailproof' )
-					: esc_attr__( 'TrailProof fixes are OFF — click to enable', 'trailproof' ),
+			'href' => '#',
+			'meta' => [
+				'title' => esc_attr__( 'Preview TrailProof with / without injected elements', 'trailproof' ),
 			],
 		] );
 	}
+
+	// ── Toggle script ────────────────────────────────────────────────────────
 
 	public function enqueue(): void {
 		if ( ! is_admin_bar_showing() || ! current_user_can( 'manage_options' ) ) {
 			return;
 		}
 
-		$nonce    = wp_create_nonce( 'wp_rest' );
-		$rest_url = rest_url( 'trailproof/v1/settings' );
+		$ls_key = esc_js( self::LS_KEY );
 
-		// Piggyback on the always-present admin-bar script handle
-		wp_add_inline_script( 'admin-bar', $this->build_script( $nonce, $rest_url ) );
+		// phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+		wp_add_inline_script( 'admin-bar', $this->build_script( $ls_key ) );
 	}
+
+	private function build_script( string $ls_key ): string {
+		return <<<JS
+(function () {
+	var LS_KEY = '{$ls_key}';
+
+	function isOn() {
+		try { return localStorage.getItem(LS_KEY) !== 'off'; } catch(e) { return true; }
+	}
+
+	function applyState(on) {
+		var pill = document.querySelector('#wp-admin-bar-trailproof-toggle .tp-ab-pill');
+		if (pill) {
+			pill.className   = 'tp-ab-pill tp-ab-pill--' + (on ? 'on' : 'off');
+			pill.textContent = on ? 'ON' : 'OFF';
+		}
+		if (document.body) document.body.classList.toggle('trailproof-preview-off', !on);
+	}
+
+	// Apply saved state once the admin bar is in the DOM
+	document.addEventListener('DOMContentLoaded', function () {
+		applyState(isOn());
+	});
+
+	// Use event delegation so we don't need to find the element at script-load time
+	document.addEventListener('click', function (e) {
+		var t = e.target;
+		if (!t || typeof t.closest !== 'function') return;
+		if (!t.closest('#wp-admin-bar-trailproof-toggle')) return;
+		e.preventDefault();
+		var next = !isOn();
+		try {
+			if (next) localStorage.removeItem(LS_KEY);
+			else localStorage.setItem(LS_KEY, 'off');
+		} catch(ex) {}
+		applyState(next);
+	});
+})();
+JS;
+	}
+
+	// ── Admin bar pill styles ────────────────────────────────────────────────
 
 	public function inline_styles(): void {
 		if ( ! is_admin_bar_showing() || ! current_user_can( 'manage_options' ) ) {
@@ -69,8 +120,7 @@ class AdminBarToggle {
 			gap: 6px;
 			line-height: 1;
 		}
-		#wp-admin-bar-trailproof-toggle .tp-ab-icon { font-size: 14px; }
-		#wp-admin-bar-trailproof-toggle .tp-ab-pill {
+#wp-admin-bar-trailproof-toggle .tp-ab-pill {
 			display: inline-block;
 			font-size: 10px;
 			font-weight: 700;
@@ -81,75 +131,13 @@ class AdminBarToggle {
 		}
 		#wp-admin-bar-trailproof-toggle .tp-ab-pill--on  { background: #22C55E; color: #fff; }
 		#wp-admin-bar-trailproof-toggle .tp-ab-pill--off { background: #94A3B8; color: #fff; }
-		#wp-admin-bar-trailproof-toggle .tp-ab-pill--busy {
-			background: #94A3B8;
-			color: #fff;
-			opacity: 0.6;
+
+		/* When preview is OFF, hide TrailProof-injected elements */
+		body.trailproof-preview-off .tp-skip-link,
+		body.trailproof-preview-off [data-trailproof] {
+			display: none !important;
 		}
 		</style>
 		<?php
-	}
-
-	private function build_script( string $nonce, string $rest_url ): string {
-		$nonce_js    = esc_js( $nonce );
-		$rest_url_js = esc_js( $rest_url );
-
-		return <<<JS
-(function () {
-	var nonce   = '{$nonce_js}';
-	var restUrl = '{$rest_url_js}';
-
-	function init() {
-		var link = document.querySelector('#wp-admin-bar-trailproof-toggle > .ab-item');
-		if (!link) return;
-
-		link.addEventListener('click', function (e) {
-			e.preventDefault();
-
-			var pill = link.querySelector('.tp-ab-pill');
-			var icon = link.querySelector('.tp-ab-icon');
-			var isOn = pill && pill.classList.contains('tp-ab-pill--on');
-			var next = !isOn;
-
-			// Optimistic update
-			if (pill) {
-				pill.className   = 'tp-ab-pill tp-ab-pill--busy';
-				pill.textContent = '…';
-			}
-
-			fetch(restUrl, {
-				method:  'PUT',
-				headers: { 'Content-Type': 'application/json', 'X-WP-Nonce': nonce },
-				body:    JSON.stringify({ fixes_enabled: next }),
-			})
-			.then(function (r) { return r.json(); })
-			.then(function (data) {
-				var actual = !!data.fixes_enabled;
-				if (pill) {
-					pill.className   = 'tp-ab-pill tp-ab-pill--' + (actual ? 'on' : 'off');
-					pill.textContent = actual ? 'ON' : 'OFF';
-				}
-				if (icon) icon.textContent = actual ? '\u{1F6E1}' : '⏸';
-				// Reload so the correction engine (server-side) picks up the new setting.
-				window.location.reload();
-			})
-			.catch(function () {
-				// Revert on failure
-				if (pill) {
-					pill.className   = 'tp-ab-pill tp-ab-pill--' + (isOn ? 'on' : 'off');
-					pill.textContent = isOn ? 'ON' : 'OFF';
-				}
-				if (icon) icon.textContent = isOn ? '\u{1F6E1}' : '⏸';
-			});
-		});
-	}
-
-	if (document.readyState === 'loading') {
-		document.addEventListener('DOMContentLoaded', init);
-	} else {
-		init();
-	}
-})();
-JS;
 	}
 }

@@ -247,8 +247,10 @@ function PremiumUpsell() {
 // ─── Main page ────────────────────────────────────────────────────────────────
 
 export default function ScanHistory() {
-	const [ scans,   setScans ]   = useState( [] );
-	const [ loading, setLoading ] = useState( true );
+	const [ scans,       setScans ]       = useState( [] );
+	const [ loading,     setLoading ]     = useState( true );
+	const [ confirming,  setConfirming ]  = useState( false );
+	const [ clearing,    setClearing ]    = useState( false );
 
 	useEffect( () => {
 		apiFetch( { path: '/trailproof/v1/scans?per_page=50' } )
@@ -256,6 +258,19 @@ export default function ScanHistory() {
 			.catch( () => {} )
 			.finally( () => setLoading( false ) );
 	}, [] );
+
+	async function clearHistory() {
+		setClearing( true );
+		try {
+			await apiFetch( { path: '/trailproof/v1/scans', method: 'DELETE' } );
+			setScans( [] );
+		} catch {
+			// silently ignore — WP REST returns 200 on success
+		} finally {
+			setClearing( false );
+			setConfirming( false );
+		}
+	}
 
 	if ( loading ) return (
 		<div style={ { padding: '48px 0', textAlign: 'center', color: '#94A3B8', fontSize: 13 } }>
@@ -270,12 +285,51 @@ export default function ScanHistory() {
 				<div style={ { fontSize: 11, fontWeight: 700, color: '#2563EB', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 4 } }>
 					{ __( 'Tracking', 'trailproof' ) }
 				</div>
-				<h2 style={ { margin: 0, fontSize: 20, fontWeight: 700, color: '#1A2742' } }>
-					{ __( 'Accessibility Progress', 'trailproof' ) }
-				</h2>
-				<p style={ { fontSize: 13, color: '#64748B', margin: '6px 0 0', lineHeight: 1.6 } }>
-					{ __( 'Score and issue trends across all scans. Use this to track improvement over time and demonstrate measurable progress.', 'trailproof' ) }
-				</p>
+				<div style={ { display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 16 } }>
+					<div>
+						<h2 style={ { margin: 0, fontSize: 20, fontWeight: 700, color: '#1A2742' } }>
+							{ __( 'Accessibility Progress', 'trailproof' ) }
+						</h2>
+						<p style={ { fontSize: 13, color: '#64748B', margin: '6px 0 0', lineHeight: 1.6 } }>
+							{ __( 'Score and issue trends across all scans. Use this to track improvement over time and demonstrate measurable progress.', 'trailproof' ) }
+						</p>
+					</div>
+
+					{ scans.length > 0 && ! confirming && (
+						<button
+							className="button"
+							style={ { flexShrink: 0, marginTop: 4, color: '#b32d2e', borderColor: '#b32d2e' } }
+							onClick={ () => setConfirming( true ) }
+						>
+							{ __( 'Clear history', 'trailproof' ) }
+						</button>
+					) }
+
+					{ confirming && (
+						<div style={ { flexShrink: 0, display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 6 } }>
+							<span style={ { fontSize: 12, color: '#b32d2e', fontWeight: 600 } }>
+								{ __( 'Delete all scan records? Issues and remediation data are kept.', 'trailproof' ) }
+							</span>
+							<div style={ { display: 'flex', gap: 6 } }>
+								<button
+									className="button button-primary"
+									style={ { background: '#b32d2e', borderColor: '#b32d2e' } }
+									disabled={ clearing }
+									onClick={ clearHistory }
+								>
+									{ clearing ? __( 'Clearing…', 'trailproof' ) : __( 'Yes, clear', 'trailproof' ) }
+								</button>
+								<button
+									className="button"
+									disabled={ clearing }
+									onClick={ () => setConfirming( false ) }
+								>
+									{ __( 'Cancel', 'trailproof' ) }
+								</button>
+							</div>
+						</div>
+					) }
+				</div>
 			</div>
 
 			{ scans.length === 0 ? (

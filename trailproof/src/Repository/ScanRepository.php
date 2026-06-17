@@ -64,6 +64,11 @@ class ScanRepository {
 		);
 	}
 
+	public function clear_all(): int {
+		global $wpdb;
+		return (int) $wpdb->query( "DELETE FROM {$wpdb->prefix}tp_scans" );
+	}
+
 	public function get_last_scan_at(): ?string {
 		global $wpdb;
 

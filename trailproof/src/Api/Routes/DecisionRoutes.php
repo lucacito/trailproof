@@ -111,9 +111,13 @@ class DecisionRoutes {
 			$this->correction_repo->update_payload( (int) $existing['id'], $payload );
 			$correction_id = (int) $existing['id'];
 		} else {
+			// set_text_color injects a global <style> rule, so it must be stored without a
+			// post_id (NULL = applies on every page). All other corrections are page-specific.
+			$correction_post_id = 'set_text_color' === $transform_type ? 0 : (int) $issue['post_id'];
+
 			$correction_id = $this->correction_repo->create( [
 				'fingerprint'    => $fingerprint,
-				'post_id'        => (int) $issue['post_id'],
+				'post_id'        => $correction_post_id,
 				'url'            => $issue['url'],
 				'selector'       => $issue['selector'],
 				'transform_type' => $transform_type,

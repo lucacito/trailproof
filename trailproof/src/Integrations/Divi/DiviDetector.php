@@ -94,6 +94,44 @@ class DiviDetector {
 		return $found;
 	}
 
+	/**
+	 * Returns page titles and URLs for published posts that contain the given module.
+	 * Capped at $limit results; not separately cached since it is admin-only.
+	 */
+	public function get_pages_for_module( string $css_class, int $limit = 10 ): array {
+		global $wpdb;
+
+		$shortcode_pattern = '%[' . $wpdb->esc_like( $css_class ) . '%';
+		$block_pattern     = '%"type":"' . $wpdb->esc_like( $css_class ) . '"%';
+
+		// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
+		$rows = $wpdb->get_results(
+			$wpdb->prepare(
+				"SELECT ID, post_title FROM {$wpdb->posts}
+				 WHERE post_status = 'publish'
+				 AND (post_content LIKE %s OR post_content LIKE %s)
+				 LIMIT %d",
+				$shortcode_pattern,
+				$block_pattern,
+				$limit
+			),
+			ARRAY_A
+		);
+
+		$pages = [];
+		foreach ( $rows as $row ) {
+			$url = get_permalink( (int) $row['ID'] );
+			if ( $url ) {
+				$pages[] = [
+					'title' => $row['post_title'],
+					'url'   => $url,
+				];
+			}
+		}
+
+		return $pages;
+	}
+
 	/** Bust the module-detection cache (call after content changes). */
 	public function bust_cache(): void {
 		delete_transient( self::CACHE_KEY );

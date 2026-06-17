@@ -30,7 +30,11 @@ class SetTextColorTransform implements TransformInterface {
 			return false;
 		}
 
-		$css   = esc_attr( $selector ) . ' { color: ' . esc_attr( $color ) . ' !important; }';
+		// Do not HTML-escape the CSS selector — esc_attr() turns "div > p" into "div &gt; p",
+		// which is invalid CSS. Both values are already sanitized above.
+		// Scope under body:not(.trailproof-preview-off) so the admin-bar toggle hides
+		// this correction when the user wants to preview the un-fixed state.
+		$css   = 'body:not(.trailproof-preview-off) ' . $selector . ' { color: ' . $color . ' !important; }';
 		$style = $dom->createElement( 'style' );
 		$style->setAttribute( 'data-trailproof', 'contrast-fix' );
 		$style->appendChild( $dom->createTextNode( $css ) );

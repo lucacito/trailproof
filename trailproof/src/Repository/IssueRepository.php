@@ -106,6 +106,10 @@ class IssueRepository {
 			$where[] = 'rule_id = %s';
 			$args[]  = $filters['rule_id'];
 		}
+		if ( ! empty( $filters['wcag_sc'] ) ) {
+			$where[] = 'wcag_sc = %s';
+			$args[]  = $filters['wcag_sc'];
+		}
 
 		$where_sql = implode( ' AND ', $where );
 		$args[]    = $limit;

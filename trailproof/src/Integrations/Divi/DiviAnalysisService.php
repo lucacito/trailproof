@@ -99,6 +99,7 @@ class DiviAnalysisService implements BuilderIntegration {
 				'supported'    => $def['supported'],
 				'status'       => $status,
 				'page_count'   => $detected_in_site[ $key ] ?? 0,
+				'pages'        => $is_detected ? $this->detector->get_pages_for_module( $def['css_class'] ) : [],
 				'enhancements' => $def['enhancements'],
 				'aria_attrs'   => $def['aria_attrs'],
 				'before_code'  => $def['before_code'],

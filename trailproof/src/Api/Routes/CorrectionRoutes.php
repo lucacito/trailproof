@@ -89,15 +89,28 @@ class CorrectionRoutes {
 			return new \WP_REST_Response( [ 'error' => 'Invalid transform_type.' ], 400 );
 		}
 
-		$correction_id = $this->correction_repo->create( [
-			'fingerprint'    => $fingerprint,
-			'post_id'        => $post_id,
-			'url'            => $url,
-			'selector'       => $selector,
-			'transform_type' => $transform_type,
-			'payload'        => $payload,
-			'original'       => $original,
-		] );
+		// Avoid duplicate rows: if an enabled correction already exists for this fingerprint,
+		// update its payload rather than inserting another row.
+		$existing = $this->correction_repo->get_first_enabled_by_fingerprint( $fingerprint );
+
+		if ( $existing ) {
+			$this->correction_repo->update_payload( (int) $existing['id'], $payload );
+			$correction_id = (int) $existing['id'];
+		} else {
+			$correction_id = $this->correction_repo->create( [
+				'fingerprint'    => $fingerprint,
+				'post_id'        => $post_id,
+				'url'            => $url,
+				'selector'       => $selector,
+				'transform_type' => $transform_type,
+				'payload'        => $payload,
+				'original'       => $original,
+			] );
+		}
+
+		if ( ! $correction_id ) {
+			return new \WP_REST_Response( [ 'error' => 'Failed to save correction.' ], 500 );
+		}
 
 		// Mark the issue as fixed and log the decision
 		if ( $issue_id ) {

@@ -109,18 +109,25 @@ class CorrectionEngine {
 				continue;
 			}
 
-			try {
-				$xpath_expr = $converter->toXPath( $selector );
-				$nodes      = $xpath->query( $xpath_expr );
-			} catch ( \Exception ) {
-				continue;
-			}
+			// set_text_color injects CSS into <head> and never needs a specific DOM element.
+			// Skipping the XPath step avoids silent failures when axe-core generates selectors
+			// with pseudo-classes or combinators that symfony/css-selector cannot convert.
+			if ( 'set_text_color' === $type ) {
+				$element = null;
+			} else {
+				try {
+					$xpath_expr = $converter->toXPath( $selector );
+					$nodes      = $xpath->query( $xpath_expr );
+				} catch ( \Exception ) {
+					continue;
+				}
 
-			$element = ( $nodes && $nodes->length > 0 ) ? $nodes->item( 0 ) : null;
+				$element = ( $nodes && $nodes->length > 0 ) ? $nodes->item( 0 ) : null;
 
-			// DOMNode → DOMElement cast safety
-			if ( $element !== null && ! ( $element instanceof \DOMElement ) ) {
-				continue;
+				// DOMNode → DOMElement cast safety
+				if ( $element !== null && ! ( $element instanceof \DOMElement ) ) {
+					continue;
+				}
 			}
 
 			try {

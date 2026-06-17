@@ -213,9 +213,35 @@ class SettingsPage {
 		$clean['notification_email']   = sanitize_email( $input['notification_email'] ?? '' );
 		$clean['notify_on_regression'] = ! empty( $input['notify_on_regression'] );
 
-		// fixes_enabled is toggled exclusively via REST API; preserve the stored value on HTML form saves.
-		$existing_for_fixes         = (array) get_option( self::OPTION_KEY, [] );
-		$clean['fixes_enabled']     = $existing_for_fixes['fixes_enabled'] ?? true;
+		// fixes_enabled and sitewide enhancement settings are managed via REST API.
+		// When $input contains these keys (REST call), use them. When they're absent
+		// (HTML form submit), preserve whatever is already in the database so the form
+		// cannot silently wipe settings it knows nothing about.
+		$existing_rest = (array) get_option( self::OPTION_KEY, [] );
+
+		$clean['fixes_enabled'] = array_key_exists( 'fixes_enabled', $input )
+			? (bool) $input['fixes_enabled']
+			: ( $existing_rest['fixes_enabled'] ?? true );
+
+		$clean['focus_style_enabled'] = array_key_exists( 'focus_style_enabled', $input )
+			? (bool) $input['focus_style_enabled']
+			: ( $existing_rest['focus_style_enabled'] ?? false );
+
+		$clean['focus_style_color'] = array_key_exists( 'focus_style_color', $input )
+			? ( sanitize_hex_color( $input['focus_style_color'] ) ?: '#0066CC' )
+			: ( $existing_rest['focus_style_color'] ?? '#0066CC' );
+
+		$clean['touch_target_enabled'] = array_key_exists( 'touch_target_enabled', $input )
+			? (bool) $input['touch_target_enabled']
+			: ( $existing_rest['touch_target_enabled'] ?? false );
+
+		$clean['reduced_motion_enabled'] = array_key_exists( 'reduced_motion_enabled', $input )
+			? (bool) $input['reduced_motion_enabled']
+			: ( $existing_rest['reduced_motion_enabled'] ?? false );
+
+		$clean['base_font_size'] = array_key_exists( 'base_font_size', $input )
+			? (int) $input['base_font_size']
+			: (int) ( $existing_rest['base_font_size'] ?? 0 );
 
 		return $clean;
 	}
@@ -226,16 +252,21 @@ class SettingsPage {
 
 	private function defaults(): array {
 		return [
-			'post_types'           => [ 'post', 'page' ],
-			'url_include'          => '',
-			'url_exclude'          => '',
-			'scan_schedule'        => 'weekly',
-			'white_label'          => false,
-			'wave_api_key'         => '',
-			'claude_api_key'       => '',
-			'notification_email'   => '',
-			'notify_on_regression' => true,
-			'fixes_enabled'        => true,
+			'post_types'             => [ 'post', 'page' ],
+			'url_include'            => '',
+			'url_exclude'            => '',
+			'scan_schedule'          => 'weekly',
+			'white_label'            => false,
+			'wave_api_key'           => '',
+			'claude_api_key'         => '',
+			'notification_email'     => '',
+			'notify_on_regression'   => true,
+			'fixes_enabled'          => true,
+			'focus_style_enabled'    => false,
+			'focus_style_color'      => '#0066CC',
+			'touch_target_enabled'   => false,
+			'reduced_motion_enabled' => false,
+			'base_font_size'         => 0,
 		];
 	}
 }

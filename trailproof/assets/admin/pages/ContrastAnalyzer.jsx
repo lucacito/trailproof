@@ -135,6 +135,7 @@ function ContrastIssueCard( { issue, inGroup = false, onFixApplied } ) {
 	const [ confirming,  setConfirming ]  = useState( false );
 	const [ applying,    setApplying ]    = useState( false );
 	const [ reverting,   setReverting ]   = useState( false );
+	const [ applyError,  setApplyError ]  = useState( null );
 
 	const fg           = issue.fg_color;
 	const bg           = issue.bg_color || null;
@@ -146,6 +147,7 @@ function ContrastIssueCard( { issue, inGroup = false, onFixApplied } ) {
 	async function applyFix() {
 		setApplying( true );
 		setConfirming( false );
+		setApplyError( null );
 		try {
 			await apiFetch( {
 				path:   '/trailproof/v1/corrections',
@@ -164,8 +166,7 @@ function ContrastIssueCard( { issue, inGroup = false, onFixApplied } ) {
 			} );
 			onFixApplied?.();
 		} catch ( err ) {
-			// eslint-disable-next-line no-console
-			console.error( '[Trailproof] Failed to apply fix:', err );
+			setApplyError( err?.message || err?.code || __( 'Failed to apply fix. Check the browser console for details.', 'trailproof' ) );
 		} finally {
 			setApplying( false );
 		}
@@ -331,6 +332,12 @@ function ContrastIssueCard( { issue, inGroup = false, onFixApplied } ) {
 							</pre>
 						) }
 					</>
+				) }
+
+				{ applyError && (
+					<div style={ { marginTop: 12, padding: '8px 12px', background: '#FEF2F2', border: '1px solid #FECACA', borderRadius: 6, fontSize: 12, color: '#B91C1C' } }>
+						<strong>{ __( 'Fix failed:', 'trailproof' ) }</strong>{ ' ' }{ applyError }
+					</div>
 				) }
 
 				{/* Fix / Revert actions — only for confirmed failures with a suggested color */}

@@ -31,28 +31,44 @@ class SitewideEnhancementsEngine {
 
 		$blocks = [];
 
+		// All rules are scoped under body:not(.trailproof-preview-off) so the admin-bar
+		// toggle can show a before/after comparison without a page reload.
+
 		if ( $settings['focus_style_enabled'] ?? false ) {
 			$color    = sanitize_hex_color( $settings['focus_style_color'] ?? '#0066CC' ) ?: '#0066CC';
-			$blocks[] = "*:focus-visible { outline: 2px solid {$color} !important; outline-offset: 2px !important; }";
+			$blocks[] = "body:not(.trailproof-preview-off) *:focus-visible { outline: 2px solid {$color} !important; outline-offset: 2px !important; }";
 		}
 
 		if ( $settings['touch_target_enabled'] ?? false ) {
 			$blocks[] =
-				"button, [role=\"button\"], input[type=\"submit\"], input[type=\"button\"], " .
-				"input[type=\"reset\"], summary { min-height: 44px; min-width: 44px; }\n" .
-				"a[href]:not(.tp-skip-link) { min-height: 44px; display: inline-flex; align-items: center; }";
+				"body:not(.trailproof-preview-off) button,\n" .
+				"body:not(.trailproof-preview-off) [role=\"button\"],\n" .
+				"body:not(.trailproof-preview-off) input[type=\"submit\"],\n" .
+				"body:not(.trailproof-preview-off) input[type=\"button\"],\n" .
+				"body:not(.trailproof-preview-off) input[type=\"reset\"],\n" .
+				"body:not(.trailproof-preview-off) summary { min-height: 44px; min-width: 44px; }\n" .
+				"body:not(.trailproof-preview-off) a[href]:not(.tp-skip-link) { min-height: 44px; display: inline-flex; align-items: center; }\n" .
+				"#wpadminbar a, #wpadminbar button, #wpadminbar [role=\"button\"] { min-height: 0; min-width: 0; display: revert; }";
 		}
 
 		if ( $settings['reduced_motion_enabled'] ?? false ) {
 			$blocks[] =
 				"@media (prefers-reduced-motion: reduce) {\n" .
-				"  *, *::before, *::after {\n" .
+				"  body:not(.trailproof-preview-off) *,\n" .
+				"  body:not(.trailproof-preview-off) *::before,\n" .
+				"  body:not(.trailproof-preview-off) *::after {\n" .
 				"    animation-duration: 0.01ms !important;\n" .
 				"    animation-iteration-count: 1 !important;\n" .
 				"    transition-duration: 0.01ms !important;\n" .
 				"    scroll-behavior: auto !important;\n" .
 				"  }\n" .
 				"}";
+		}
+
+		$font_size = (int) ( $settings['base_font_size'] ?? 0 );
+		if ( $font_size > 0 ) {
+			// font-size on html affects rem units sitewide; body:not() scoping isn't usable here
+			$blocks[] = "html { font-size: {$font_size}px !important; }";
 		}
 
 		if ( empty( $blocks ) ) {

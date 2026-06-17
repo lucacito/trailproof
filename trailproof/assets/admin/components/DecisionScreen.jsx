@@ -81,8 +81,8 @@ export default function DecisionScreen( { issue, onDecision, onCancel } ) {
 			case 'color-contrast-enhanced':
 				if ( ! contrastData?.passesAA ) return null;
 				return {
-					transform_type: 'add_aria_label',   // placeholder — contrast fix is CSS, Phase 3
-					payload: { fg: contrastData.fg, bg: contrastData.bg },
+					transform_type: 'set_text_color',
+					payload: { selector: issue.selector, color: contrastData.fg },
 					original: { fg: nodeData?.fg_color, bg: nodeData?.bg_color },
 				};
 

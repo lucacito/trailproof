@@ -44,6 +44,7 @@ class IssueRoutes {
 					'status'   => [ 'type' => 'string', 'enum' => [ 'open', 'fixed', 'deferred', 'na', 'regressed' ] ],
 					'scan_id'  => [ 'type' => 'integer', 'minimum' => 1 ],
 					'rule_id'  => [ 'type' => 'string' ],
+					'wcag_sc'  => [ 'type' => 'string' ],
 					'per_page' => [ 'type' => 'integer', 'minimum' => 1, 'maximum' => 200, 'default' => 100 ],
 					'page'     => [ 'type' => 'integer', 'minimum' => 1, 'default' => 1 ],
 				],
@@ -103,6 +104,7 @@ class IssueRoutes {
 			'status'  => $request->get_param( 'status' ),
 			'scan_id' => $request->get_param( 'scan_id' ),
 			'rule_id' => $request->get_param( 'rule_id' ),
+			'wcag_sc' => $request->get_param( 'wcag_sc' ),
 		] );
 
 		$issues = $this->issue_repo->get_list( $filters, $per_page, $offset );

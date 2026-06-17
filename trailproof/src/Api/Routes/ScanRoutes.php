@@ -45,6 +45,16 @@ class ScanRoutes {
 
 		register_rest_route(
 			$namespace,
+			'/scans',
+			[
+				'methods'             => \WP_REST_Server::DELETABLE,
+				'callback'            => [ $this, 'clear_scans' ],
+				'permission_callback' => [ $this, 'require_admin' ],
+			]
+		);
+
+		register_rest_route(
+			$namespace,
 			'/scans/(?P<id>\d+)/axe-results',
 			[
 				'methods'             => \WP_REST_Server::CREATABLE,
@@ -263,7 +273,16 @@ class ScanRoutes {
 		return new \WP_REST_Response( [ 'stored' => $count ], 200 );
 	}
 
+	public function clear_scans( \WP_REST_Request $request ): \WP_REST_Response {
+		$deleted = $this->scan_repo->clear_all();
+		return new \WP_REST_Response( [ 'deleted' => $deleted ], 200 );
+	}
+
 	public function require_editor(): bool {
 		return current_user_can( 'edit_posts' );
+	}
+
+	public function require_admin(): bool {
+		return current_user_can( 'manage_options' );
 	}
 }
