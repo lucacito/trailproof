@@ -33,24 +33,25 @@ const IconHistory    = () => <svg width="15" height="15" viewBox="0 0 15 15" fil
 const IconSettings   = () => <svg width="15" height="15" viewBox="0 0 15 15" fill="none" stroke="currentColor" strokeWidth="1.5" {...I}><circle cx="7.5" cy="7.5" r="2"/><path d="M7.5 1v2M7.5 12v2M1 7.5h2M12 7.5h2M2.9 2.9l1.4 1.4M10.7 10.7l1.4 1.4M2.9 12.1l1.4-1.4M10.7 4.3l1.4-1.4"/></svg>;
 const IconDivi       = () => <svg width="15" height="15" viewBox="0 0 15 15" fill="none" stroke="currentColor" strokeWidth="1.5" {...I}><rect x="1" y="1" width="13" height="13" rx="2"/><path d="M4 5h7M4 7.5h5M4 10h7"/></svg>;
 const IconCheck      = () => <svg width="10" height="10" viewBox="0 0 10 10" fill="none"><circle cx="5" cy="5" r="4.5" fill="#22c55e" fillOpacity=".2"/><polyline points="2.5,5 4,6.5 7.5,3" stroke="#22c55e" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>;
+const IconInfo       = () => <svg width="11" height="11" viewBox="0 0 11 11" fill="none"><circle cx="5.5" cy="5.5" r="5" stroke="currentColor" strokeWidth="1.2"/><circle cx="5.5" cy="3.5" r="0.7" fill="currentColor"/><rect x="4.85" y="5" width="1.3" height="3" rx="0.65" fill="currentColor"/></svg>;
 
 // ─── Nav definition ───────────────────────────────────────────────────────────
 // section: groups items under a labelled divider ('workflow' | 'analysis' | 'tracking' | 'clients' | 'settings')
 
 const NAV = [
-	{ id: 'dashboard',           label: __( 'Overview',          'trailproof' ), Icon: IconOverview,  section: 'top' },
-	{ id: 'scan',                label: __( 'Scan Site',         'trailproof' ), Icon: IconScan,       section: 'workflow', step: 1 },
-	{ id: 'worklist',            label: __( 'Fix Issues',        'trailproof' ), Icon: IconFix,        section: 'workflow', step: 2 },
-	{ id: 'decisions',           label: __( 'Decisions',         'trailproof' ), Icon: IconDecisions,  section: 'workflow', step: 3 },
-	{ id: 'checklist',           label: __( 'Checklist',         'trailproof' ), Icon: IconChecklist,  section: 'workflow', step: 4 },
-	{ id: 'statement',           label: __( 'Statement',         'trailproof' ), Icon: IconStatement,  section: 'workflow', step: 5 },
-	{ id: 'reports',             label: __( 'Reports',           'trailproof' ), Icon: IconReports,    section: 'workflow', step: 6 },
-	{ id: 'diviEnhancements',    label: __( 'Divi 5',            'trailproof' ), Icon: IconDivi,       section: 'builder' },
-	{ id: 'contrast',            label: __( 'Color Contrast',    'trailproof' ), Icon: IconContrast,   section: 'analysis' },
-	{ id: 'impactComparison',    label: __( 'Impact Test',       'trailproof' ), Icon: IconCompare,    section: 'analysis' },
-	{ id: 'scanHistory',         label: __( 'Scan History',      'trailproof' ), Icon: IconHistory,    section: 'tracking' },
-	{ id: 'clientPortal',        label: __( 'Client Portal',     'trailproof' ), Icon: IconPortal,     section: 'clients' },
-	{ id: 'remediationSettings', label: __( 'Remediation',       'trailproof' ), Icon: IconSettings,   section: 'settings' },
+	{ id: 'dashboard',           label: __( 'Overview',          'trailproof' ), Icon: IconOverview,  section: 'top',        tooltip: __( 'High-level view of your site\'s accessibility health score, scan status, and overall workflow progress.',                                                                                      'trailproof' ) },
+	{ id: 'scan',                label: __( 'Scan Site',         'trailproof' ), Icon: IconScan,       section: 'workflow', step: 1, tooltip: __( 'Run an automated axe-core scan to detect WCAG violations. Results are classified into auto-fixable (A), decision-required (B), and manual-check (C) buckets.',                   'trailproof' ) },
+	{ id: 'worklist',            label: __( 'Fix Issues',        'trailproof' ), Icon: IconFix,        section: 'workflow', step: 2, tooltip: __( 'Apply one-click fixes for auto-correctable Bucket A issues. Every correction is reversible — original content is never modified.',                                                'trailproof' ) },
+	{ id: 'decisions',           label: __( 'Review Decisions',  'trailproof' ), Icon: IconDecisions,  section: 'workflow', step: 3, tooltip: __( 'Review Bucket B issues that require human judgment — color contrast, alt text content, link text in context. Approve or dismiss with a side-by-side before/after view.',       'trailproof' ) },
+	{ id: 'checklist',           label: __( 'Manual Checks',     'trailproof' ), Icon: IconChecklist,  section: 'workflow', step: 4, tooltip: __( 'Sign off on Bucket C items that can\'t be machine-detected: keyboard operability, captions, reading order, form error messaging, and motion/autoplay.',                         'trailproof' ) },
+	{ id: 'statement',           label: __( 'Statement',         'trailproof' ), Icon: IconStatement,  section: 'workflow', step: 5, tooltip: __( 'Generate a dated accessibility statement documenting your remediation scope, methods, and current conformance status.',                                                           'trailproof' ) },
+	{ id: 'reports',             label: __( 'Reports',           'trailproof' ), Icon: IconReports,    section: 'workflow', step: 6, tooltip: __( 'Export an evidence bundle — audit log, applied corrections, decisions log, and accessibility statement — as a downloadable ZIP.',                                               'trailproof' ) },
+	{ id: 'contrast',            label: __( 'Color Contrast',    'trailproof' ), Icon: IconContrast,   section: 'tools',    tooltip: __( 'Interactive WCAG contrast ratio checker. Test foreground and background color pairs against AA (4.5:1) and AAA (7:1) thresholds.',                                                        'trailproof' ) },
+	{ id: 'impactComparison',    label: __( 'Impact Test',       'trailproof' ), Icon: IconCompare,    section: 'tools',    tooltip: __( 'Side-by-side before/after preview of applied corrections so you can verify that fixes render correctly on your live site.',                                                               'trailproof' ) },
+	{ id: 'scanHistory',         label: __( 'Scan History',      'trailproof' ), Icon: IconHistory,    section: 'tools',    tooltip: __( 'Browse all past scan results, compare scores over time, and review which issues appeared or resolved between scan runs.',                                                                  'trailproof' ) },
+	{ id: 'diviEnhancements',    label: __( 'Divi Editor',       'trailproof' ), Icon: IconDivi,       section: 'prevention', tooltip: __( 'Accessibility prevention layer for the Divi editor — flags WCAG problems as you build so they\'re caught before publishing.',                                                          'trailproof' ) },
+	{ id: 'remediationSettings', label: __( 'Remediation',       'trailproof' ), Icon: IconSettings,   section: 'settings', tooltip: __( 'Configure auto-fix behavior, scheduled scan frequency, sitewide enhancement rules, and correction preferences.',                                                                         'trailproof' ) },
+	{ id: 'clientPortal',        label: __( 'Client Portal',     'trailproof' ), Icon: IconPortal,     section: 'settings', tooltip: __( 'Generate token-gated share links so clients or stakeholders can view accessibility progress without needing a WordPress login.',                                                          'trailproof' ) },
 ];
 
 const PAGES = {
@@ -114,49 +115,112 @@ function SidebarFooter( { status } ) {
 
 const whiteLabel = !! window.trailproofData?.whiteLabel;
 
-function NavButton( { id, label, Icon, step, active, done, navigate } ) {
+function NavButton( { id, label, Icon, step, active, done, navigate, tooltip } ) {
+	const [ tipPos, setTipPos ] = useState( null );
+
+	const showTip = ( e ) => {
+		const r = e.currentTarget.getBoundingClientRect();
+		setTipPos( { x: r.right + 10, y: r.top + r.height / 2 } );
+	};
+	const hideTip = () => setTipPos( null );
+
 	return (
-		<button
-			onClick={ () => navigate( id ) }
-			aria-current={ active ? 'page' : undefined }
-			style={ {
-				display:    'flex',
-				alignItems: 'center',
-				gap:        9,
-				width:      '100%',
-				padding:    '7px 14px 7px 12px',
-				background: active ? 'rgba(255,255,255,0.1)' : 'none',
-				border:     'none',
-				borderLeft: `3px solid ${ active ? '#5B9CF6' : 'transparent' }`,
-				color:      active ? '#fff' : 'rgba(255,255,255,0.55)',
-				fontSize:   12,
-				fontWeight: active ? 600 : 400,
-				cursor:     'pointer',
-				textAlign:  'left',
-				lineHeight: 1,
-			} }
-		>
-			{ step ? (
-				<span style={ {
-					width:          15,
-					height:         15,
-					borderRadius:   '50%',
-					flexShrink:     0,
-					background:     done ? '#22c55e' : active ? '#5B9CF6' : 'rgba(255,255,255,0.12)',
-					color:          '#fff',
-					fontSize:       8,
-					fontWeight:     700,
-					display:        'flex',
-					alignItems:     'center',
-					justifyContent: 'center',
-				} }>
-					{ done ? '✓' : step }
-				</span>
-			) : (
-				<Icon />
+		<div style={ { display: 'flex', alignItems: 'stretch', width: '100%' } }>
+			<button
+				onClick={ () => navigate( id ) }
+				aria-current={ active ? 'page' : undefined }
+				style={ {
+					flex:       1,
+					display:    'flex',
+					alignItems: 'center',
+					gap:        9,
+					padding:    '7px 8px 7px 12px',
+					background: active ? 'rgba(255,255,255,0.1)' : 'none',
+					border:     'none',
+					borderLeft: `3px solid ${ active ? '#5B9CF6' : 'transparent' }`,
+					color:      active ? '#fff' : 'rgba(255,255,255,0.55)',
+					fontSize:   12,
+					fontWeight: active ? 600 : 400,
+					cursor:     'pointer',
+					textAlign:  'left',
+					lineHeight: 1,
+					minWidth:   0,
+				} }
+			>
+				{ step ? (
+					<span style={ {
+						width:          15,
+						height:         15,
+						borderRadius:   '50%',
+						flexShrink:     0,
+						background:     done ? '#22c55e' : active ? '#5B9CF6' : 'rgba(255,255,255,0.12)',
+						color:          '#fff',
+						fontSize:       8,
+						fontWeight:     700,
+						display:        'flex',
+						alignItems:     'center',
+						justifyContent: 'center',
+					} }>
+						{ done ? '✓' : step }
+					</span>
+				) : (
+					<Icon />
+				) }
+				<span style={ { flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' } }>{ label }</span>
+			</button>
+			{ tooltip && (
+				<div
+					onMouseEnter={ showTip }
+					onMouseLeave={ hideTip }
+					onFocus={ showTip }
+					onBlur={ hideTip }
+					tabIndex={ 0 }
+					role="button"
+					aria-label={ `${ __( 'About', 'trailproof' ) } ${ label }` }
+					onClick={ ( e ) => e.stopPropagation() }
+					onKeyDown={ ( e ) => e.key === 'Enter' && e.stopPropagation() }
+					style={ {
+						display:        'flex',
+						alignItems:     'center',
+						justifyContent: 'center',
+						width:          26,
+						flexShrink:     0,
+						color:          'rgba(255,255,255,0.25)',
+						cursor:         'help',
+						border:         'none',
+						background:     'none',
+						padding:        0,
+						outline:        'none',
+					} }
+				>
+					<IconInfo />
+					{ tipPos && (
+						<div
+							role="tooltip"
+							style={ {
+								position:      'fixed',
+								left:          tipPos.x,
+								top:           tipPos.y,
+								transform:     'translateY(-50%)',
+								background:    '#1A2742',
+								border:        '1px solid rgba(255,255,255,0.15)',
+								borderRadius:  6,
+								padding:       '9px 13px',
+								fontSize:      11,
+								lineHeight:    1.6,
+								color:         'rgba(255,255,255,0.85)',
+								maxWidth:      240,
+								zIndex:        99999,
+								boxShadow:     '0 4px 20px rgba(0,0,0,0.45)',
+								pointerEvents: 'none',
+							} }
+						>
+							{ tooltip }
+						</div>
+					) }
+				</div>
 			) }
-			<span style={ { flex: 1 } }>{ label }</span>
-		</button>
+		</div>
 	);
 }
 
@@ -180,17 +244,16 @@ function NavDivider() {
 }
 
 function Sidebar( { page, navigate, status } ) {
-	const top      = NAV.filter( n => n.section === 'top' );
-	const workflow = NAV.filter( n => n.section === 'workflow' );
-	const builder  = NAV.filter( n => n.section === 'builder' );
-	const analysis = NAV.filter( n => n.section === 'analysis' );
-	const tracking = NAV.filter( n => n.section === 'tracking' );
-	const clients  = NAV.filter( n => n.section === 'clients' );
-	const settings = NAV.filter( n => n.section === 'settings' );
+	const top        = NAV.filter( n => n.section === 'top' );
+	const workflow   = NAV.filter( n => n.section === 'workflow' );
+	const tools      = NAV.filter( n => n.section === 'tools' );
+	const prevention = NAV.filter( n => n.section === 'prevention' );
+	const settings   = NAV.filter( n => n.section === 'settings' );
 
-	const renderItems = ( items ) => items.map( ( { id, label, Icon, step } ) => (
+	const renderItems = ( items ) => items.map( ( { id, label, Icon, step, tooltip } ) => (
 		<NavButton key={ id } id={ id } label={ label } Icon={ Icon } step={ step }
-			active={ page === id } done={ isStepDone( id, status ) } navigate={ navigate } />
+			active={ page === id } done={ isStepDone( id, status ) } navigate={ navigate }
+			tooltip={ tooltip } />
 	) );
 
 	return (
@@ -221,19 +284,12 @@ function Sidebar( { page, navigate, status } ) {
 				{ renderItems( workflow ) }
 
 				<NavDivider />
-				<SectionLabel>{ __( 'Builder Intelligence', 'trailproof' ) }</SectionLabel>
-				{ renderItems( builder ) }
+				<SectionLabel>{ __( 'Tools', 'trailproof' ) }</SectionLabel>
+				{ renderItems( tools ) }
 
 				<NavDivider />
-				<SectionLabel>{ __( 'Analysis', 'trailproof' ) }</SectionLabel>
-				{ renderItems( analysis ) }
-
-				<NavDivider />
-				<SectionLabel>{ __( 'Tracking', 'trailproof' ) }</SectionLabel>
-				{ renderItems( tracking ) }
-
-				<NavDivider />
-				{ renderItems( clients ) }
+				<SectionLabel>{ __( 'Prevention', 'trailproof' ) }</SectionLabel>
+				{ renderItems( prevention ) }
 
 				<NavDivider />
 				<SectionLabel>{ __( 'Settings', 'trailproof' ) }</SectionLabel>

@@ -45,12 +45,13 @@ class IssueRepository {
 				$table,
 				[
 					'scan_id'           => (int) $data['scan_id'],
+					'bucket'            => $data['bucket'],
 					'status'            => $new_status,
 					'confirmed_by_json' => wp_json_encode( $confirmed ),
 					'priority_score'    => (int) ( $data['priority_score'] ?? 50 ),
 				],
 				[ 'id' => (int) $existing['id'] ],
-				[ '%d', '%s', '%s', '%d' ],
+				[ '%d', '%s', '%s', '%s', '%d' ],
 				[ '%d' ]
 			);
 
@@ -186,9 +187,53 @@ class IssueRepository {
 	}
 
 	private function enrich_page_title( array $row ): array {
-		$post_id          = (int) ( $row['post_id'] ?? 0 );
+		$post_id = (int) ( $row['post_id'] ?? 0 );
+
+		// If post_id wasn't stored (common when scanned via "ugly" permalinks like /?page_id=11),
+		// try to extract it from the URL query string.
+		if ( ! $post_id && ! empty( $row['url'] ) ) {
+			$query = wp_parse_url( $row['url'], PHP_URL_QUERY );
+			if ( $query ) {
+				parse_str( $query, $qp );
+				$post_id = (int) ( $qp['page_id'] ?? $qp['p'] ?? $qp['post_id'] ?? 0 );
+			}
+		}
+
 		$row['page_title'] = $post_id ? (string) get_the_title( $post_id ) : '';
 		return $row;
+	}
+
+	/**
+	 * Mark all open/regressed issues for a rule on a specific page as fixed.
+	 * Called when a scan confirms the rule passes — i.e. the problem is no longer present.
+	 */
+	public function mark_passed( string $rule_id, int $post_id, string $url ): void {
+		global $wpdb;
+
+		// Match by post_id when available; fall back to url for post_id=0 cases.
+		if ( $post_id > 0 ) {
+			// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared,PluginCheck.Security.DirectDB.UnescapedDBParameter
+			$wpdb->query(
+				$wpdb->prepare(
+					"UPDATE {$wpdb->prefix}tp_issues
+					 SET status = 'fixed'
+					 WHERE rule_id = %s AND post_id = %d AND status IN ('open','regressed')",
+					$rule_id,
+					$post_id
+				)
+			);
+		} else {
+			// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared,PluginCheck.Security.DirectDB.UnescapedDBParameter
+			$wpdb->query(
+				$wpdb->prepare(
+					"UPDATE {$wpdb->prefix}tp_issues
+					 SET status = 'fixed'
+					 WHERE rule_id = %s AND url = %s AND status IN ('open','regressed')",
+					$rule_id,
+					$url
+				)
+			);
+		}
 	}
 
 	public function set_status( int $id, string $status ): void {
@@ -201,6 +246,32 @@ class IssueRepository {
 			[ '%s' ],
 			[ '%d' ]
 		);
+	}
+
+	/**
+	 * Bulk-update status for every issue that shares the same CSS selector and rule type.
+	 * Used when a global CSS correction (e.g. set_text_color) is applied or reverted:
+	 * the same footer/header element on every page gets fixed/reverted in one pass.
+	 */
+	public function set_status_by_selector_and_rules( string $selector, array $rule_ids, string $status ): void {
+		global $wpdb;
+
+		if ( empty( $rule_ids ) || '' === $selector ) {
+			return;
+		}
+
+		$placeholders = implode( ',', array_fill( 0, count( $rule_ids ), '%s' ) );
+
+		// phpcs:disable WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQLPlaceholders.UnfinishedPrepare
+		$wpdb->query(
+			$wpdb->prepare(
+				"UPDATE {$wpdb->prefix}tp_issues
+				 SET status = %s, updated_at = %s
+				 WHERE selector = %s AND rule_id IN ($placeholders)",
+				array_merge( [ $status, current_time( 'mysql' ), $selector ], $rule_ids )
+			)
+		);
+		// phpcs:enable
 	}
 
 	/**

@@ -40,6 +40,9 @@ class BucketClassifier {
 
 		// Elementor — auto-fixable
 		'elementor-image-alt',
+
+		// Form autocomplete — machine-derivable from input type/name
+		'input-no-autocomplete',
 	];
 
 	/**
@@ -48,6 +51,7 @@ class BucketClassifier {
 	 */
 	private const BUCKET_B = [
 		'document-title',           // correct title is human knowledge; use set_title transform
+		'page-has-heading-one',     // detected by axe-core; fix (writing the h1 text) is human judgment
 		'color-contrast',
 		'color-contrast-enhanced',
 		'heading-order',

@@ -108,6 +108,16 @@ class CorrectionRoutes {
 			}
 		}
 
+		// For global CSS corrections (set_text_color), the same selector on every page is
+		// fixed by a single injected rule — mark all matching issues fixed in one shot.
+		if ( 'set_text_color' === $transform_type && $selector ) {
+			$this->issue_repo->set_status_by_selector_and_rules(
+				$selector,
+				[ 'color-contrast', 'color-contrast-enhanced' ],
+				'fixed'
+			);
+		}
+
 		return new \WP_REST_Response( [ 'correction_id' => $correction_id ], 201 );
 	}
 
@@ -128,10 +138,19 @@ class CorrectionRoutes {
 			$action = $enabled ? 'correction_enabled' : 'correction_reverted';
 			$this->log_repo->log( $action, $correction['fingerprint'], null, [ 'enabled' => $enabled ] );
 
-			// Sync issue status
-			$issue_id = $this->find_issue_id_by_fingerprint( $correction['fingerprint'] );
-			if ( $issue_id ) {
-				$this->issue_repo->set_status( $issue_id, $enabled ? 'fixed' : 'open' );
+			// For global CSS corrections, bulk-sync every matching issue across all pages.
+			if ( 'set_text_color' === ( $correction['transform_type'] ?? '' ) && ! empty( $correction['selector'] ) ) {
+				$this->issue_repo->set_status_by_selector_and_rules(
+					$correction['selector'],
+					[ 'color-contrast', 'color-contrast-enhanced' ],
+					$enabled ? 'fixed' : 'open'
+				);
+			} else {
+				// For page-specific corrections, sync just the fingerprinted issue.
+				$issue_id = $this->find_issue_id_by_fingerprint( $correction['fingerprint'] );
+				if ( $issue_id ) {
+					$this->issue_repo->set_status( $issue_id, $enabled ? 'fixed' : 'open' );
+				}
 			}
 		}
 

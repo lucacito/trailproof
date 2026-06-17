@@ -77,6 +77,7 @@ class AdminMenu {
 				'nonce'            => wp_create_nonce( 'wp_rest' ),
 				'version'          => TRAILPROOF_VERSION,
 				'axeUrl'           => TRAILPROOF_URL . 'build/axe.min.js',
+				'siteUrl'          => home_url( '/' ),
 				'locale'           => str_replace( '_', '-', get_locale() ),
 				'waveEnabled'      => ! empty( $settings['wave_api_key'] ),
 				'claudeEnabled'    => ! empty( $settings['claude_api_key'] ),

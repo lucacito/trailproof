@@ -27,6 +27,16 @@ class SettingsRoutes {
 				],
 			]
 		);
+
+		register_rest_route(
+			$namespace,
+			'/reset-data',
+			[
+				'methods'             => \WP_REST_Server::CREATABLE,
+				'callback'            => [ $this, 'reset_data' ],
+				'permission_callback' => [ $this, 'require_admin' ],
+			]
+		);
 	}
 
 	public function get_settings( \WP_REST_Request $request ): \WP_REST_Response {
@@ -39,6 +49,11 @@ class SettingsRoutes {
 			'notification_email'   => $s['notification_email'] ?? '',
 			'wave_enabled'         => ! empty( $s['wave_api_key'] ),
 			'claude_enabled'       => ! empty( $s['claude_api_key'] ),
+			// Sitewide CSS enhancements
+			'focus_style_enabled'    => (bool) ( $s['focus_style_enabled'] ?? false ),
+			'focus_style_color'      => $s['focus_style_color'] ?? '#0066CC',
+			'touch_target_enabled'   => (bool) ( $s['touch_target_enabled'] ?? false ),
+			'reduced_motion_enabled' => (bool) ( $s['reduced_motion_enabled'] ?? false ),
 		], 200 );
 	}
 
@@ -62,10 +77,35 @@ class SettingsRoutes {
 		if ( array_key_exists( 'notification_email', $body ) ) {
 			$current['notification_email'] = sanitize_email( (string) $body['notification_email'] );
 		}
+		if ( array_key_exists( 'focus_style_enabled', $body ) ) {
+			$current['focus_style_enabled'] = (bool) $body['focus_style_enabled'];
+		}
+		if ( array_key_exists( 'focus_style_color', $body ) ) {
+			$current['focus_style_color'] = sanitize_hex_color( (string) $body['focus_style_color'] ) ?: '#0066CC';
+		}
+		if ( array_key_exists( 'touch_target_enabled', $body ) ) {
+			$current['touch_target_enabled'] = (bool) $body['touch_target_enabled'];
+		}
+		if ( array_key_exists( 'reduced_motion_enabled', $body ) ) {
+			$current['reduced_motion_enabled'] = (bool) $body['reduced_motion_enabled'];
+		}
 
 		update_option( 'trailproof_settings', $current );
 
 		return $this->get_settings( $request );
+	}
+
+	public function reset_data( \WP_REST_Request $request ): \WP_REST_Response {
+		global $wpdb;
+
+		// Truncate scan data and corrections; leave tp_decisions_log (append-only audit trail).
+		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.DirectDatabaseQuery.SchemaChange
+		$wpdb->query( "TRUNCATE TABLE {$wpdb->prefix}tp_corrections" );
+		$wpdb->query( "TRUNCATE TABLE {$wpdb->prefix}tp_issues" );
+		$wpdb->query( "TRUNCATE TABLE {$wpdb->prefix}tp_scans" );
+		// phpcs:enable
+
+		return new \WP_REST_Response( [ 'reset' => true ], 200 );
 	}
 
 	public function require_admin(): bool {

@@ -14,6 +14,8 @@ use Trailproof\Correction\Transform\SetAltEmptyDecorativeTransform;
 use Trailproof\Correction\Transform\SetAltTransform;
 use Trailproof\Correction\Transform\SetLangTransform;
 use Trailproof\Correction\Transform\SetTitleTransform;
+use Trailproof\Correction\Transform\SetFormAutocompleteTransform;
+use Trailproof\Correction\Transform\SetTextColorTransform;
 use Trailproof\Correction\Transform\WidgetAriaPatternTransform;
 
 class TransformFactory {
@@ -31,6 +33,8 @@ class TransformFactory {
 			'add_aria_label'           => new AddAriaLabelTransform(),
 			'add_aria_role'            => new AddAriaRoleTransform(),
 			'widget_aria_pattern'      => new WidgetAriaPatternTransform(),
+			'set_text_color'           => new SetTextColorTransform(),
+			'set_form_autocomplete'    => new SetFormAutocompleteTransform(),
 			default                    => throw new \InvalidArgumentException( "Unknown transform type: {$type}" ), // phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped
 		};
 	}
@@ -45,6 +49,7 @@ class TransformFactory {
 			'inject_skiplink'          => [ 'target' => '#main', 'text' => __( 'Skip to main content', 'trailproof' ) ],
 			'add_landmark'             => [ 'role' => 'main' ],
 			'set_alt_empty_decorative' => [],
+			'set_form_autocomplete'    => [], // transform self-derives the value from element attributes
 			'widget_aria_pattern'      => match ( $rule_id ) {
 				'divi-accordion' => [ 'pattern' => 'divi-accordion' ],
 				'divi-tabs'      => [ 'pattern' => 'divi-tabs' ],

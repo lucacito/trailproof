@@ -13,6 +13,7 @@ class WcagMap {
 	private const MAP = [
 		'html-has-lang'                       => [ '3.1.1', 'Screen readers use the page language attribute to select the correct pronunciation engine; without it, non-English text sounds garbled and navigation by language is impossible.' ],
 		'document-title'                       => [ '2.4.2', 'Browser tabs and bookmarks use the page title; a missing or generic title leaves users unable to identify the page without loading it.' ],
+		'page-has-heading-one'                 => [ '2.4.6', 'A page without a level-one heading lacks the primary structural anchor that screen reader users expect to identify and navigate to the main topic.' ],
 		'bypass'                               => [ '2.4.1', 'Keyboard-only users must tab through every navigation link on every page load unless a skip link lets them jump directly to the main content.' ],
 		'image-alt'                            => [ '1.1.1', 'Screen reader users hear alt text instead of seeing the image; without it the image conveys no information and may be announced as a file path.' ],
 		'input-image-alt'                      => [ '1.1.1', 'Image buttons need alt text so screen reader users know what action the button performs.' ],
@@ -57,6 +58,9 @@ class WcagMap {
 		'elementor-button-text'    => [ '2.4.4', 'An Elementor Button widget uses generic link text ("Click here", "Read more") that is meaningless when navigated out of context.' ],
 		'elementor-carousel-aria'  => [ '4.1.2', 'An Elementor Image Carousel widget is missing role="list" on the slide track and role="listitem" on individual slides, leaving screen reader users unable to determine how many slides exist or navigate between them.' ],
 		'elementor-icon-box-name'  => [ '4.1.2', 'An Elementor Icon Box widget link has no accessible name beyond the icon itself; screen reader users hear "link" with no indication of the destination or purpose.' ],
+
+		// Form autocomplete
+		'input-no-autocomplete'    => [ '1.3.5', 'Form fields for common data types (email, phone, name) lack autocomplete attributes; browsers and assistive technology cannot identify the expected data type, making form completion slower and more error-prone for users with cognitive or motor disabilities.' ],
 	];
 
 	public static function get_sc( string $rule_id ): ?string {

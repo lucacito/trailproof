@@ -70,22 +70,24 @@ class CorrectionRepository {
 		global $wpdb;
 
 		if ( $post_id > 0 ) {
+			// Include post-specific corrections AND global ones (post_id IS NULL = applies to all pages).
 			return (bool) $wpdb->get_var(
 				$wpdb->prepare(
-					"SELECT 1 FROM {$wpdb->prefix}tp_corrections WHERE post_id = %d AND enabled = 1 LIMIT 1",
+					"SELECT 1 FROM {$wpdb->prefix}tp_corrections WHERE (post_id = %d OR post_id IS NULL) AND enabled = 1 LIMIT 1",
 					$post_id
 				)
 			);
 		}
 
-		// For the homepage (post_id = 0), check for any site-wide enabled corrections
+		// Homepage (post_id = 0): check for global corrections only.
 		return (bool) $wpdb->get_var(
-			"SELECT 1 FROM {$wpdb->prefix}tp_corrections WHERE enabled = 1 LIMIT 1"
+			"SELECT 1 FROM {$wpdb->prefix}tp_corrections WHERE post_id IS NULL AND enabled = 1 LIMIT 1"
 		);
 	}
 
 	/**
 	 * Return all enabled corrections for a post, ordered by id (stable application order).
+	 * Global corrections (post_id IS NULL) are included on every page.
 	 */
 	public function get_enabled_for( int $post_id ): array {
 		global $wpdb;
@@ -93,16 +95,16 @@ class CorrectionRepository {
 		if ( $post_id > 0 ) {
 			return (array) $wpdb->get_results(
 				$wpdb->prepare(
-					"SELECT * FROM {$wpdb->prefix}tp_corrections WHERE post_id = %d AND enabled = 1 ORDER BY id ASC",
+					"SELECT * FROM {$wpdb->prefix}tp_corrections WHERE (post_id = %d OR post_id IS NULL) AND enabled = 1 ORDER BY id ASC",
 					$post_id
 				),
 				ARRAY_A
 			);
 		}
 
-		// Homepage: return all enabled corrections with post_id = 0
+		// Homepage (post_id = 0): return global corrections.
 		return (array) $wpdb->get_results(
-			"SELECT * FROM {$wpdb->prefix}tp_corrections WHERE post_id = 0 AND enabled = 1 ORDER BY id ASC",
+			"SELECT * FROM {$wpdb->prefix}tp_corrections WHERE post_id IS NULL AND enabled = 1 ORDER BY id ASC",
 			ARRAY_A
 		);
 	}

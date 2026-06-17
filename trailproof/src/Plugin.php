@@ -8,6 +8,7 @@ use Trailproof\Admin\AdminMenu;
 use Trailproof\Admin\SettingsPage;
 use Trailproof\Api\RestApi;
 use Trailproof\Correction\CorrectionEngine;
+use Trailproof\Correction\SitewideEnhancementsEngine;
 use Trailproof\Cron\StaticScanScheduler;
 use Trailproof\Notification\NotificationService;
 use Trailproof\Repository\CorrectionRepository;
@@ -24,13 +25,14 @@ class Plugin {
 		}
 		self::$initialized = true;
 
-		$settings_page        = new SettingsPage();
-		$admin_menu           = new AdminMenu( $settings_page );
-		$rest_api             = new RestApi();
-		$scheduler            = new StaticScanScheduler();
-		$correction_engine    = new CorrectionEngine( new CorrectionRepository() );
-		$divi_prevention      = new DiviEditorPrevention();
-		$notification_service = new NotificationService( new IssueRepository() );
+		$settings_page             = new SettingsPage();
+		$admin_menu                = new AdminMenu( $settings_page );
+		$rest_api                  = new RestApi();
+		$scheduler                 = new StaticScanScheduler();
+		$correction_engine         = new CorrectionEngine( new CorrectionRepository() );
+		$sitewide_enhancements     = new SitewideEnhancementsEngine();
+		$divi_prevention           = new DiviEditorPrevention();
+		$notification_service      = new NotificationService( new IssueRepository() );
 
 		// Cron hook + custom schedule must be registered on every load
 		$scheduler->register();
@@ -39,6 +41,9 @@ class Plugin {
 
 		// Render-time correction layer (non-destructive, output buffering)
 		$correction_engine->register();
+
+		// Sitewide CSS enhancements (focus indicators, touch targets, reduced motion)
+		$sitewide_enhancements->register();
 
 		// Divi 5 editor prevention — author-side nudges in the Visual Builder
 		$divi_prevention->register();

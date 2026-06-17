@@ -10,15 +10,42 @@ const SCAN_TIMEOUT_MS = 40_000; // 40 s per page
 /**
  * Injects axe-core into a same-origin iframe and runs it.
  * Returns the raw axe results object.
+ *
+ * We inject a <style> that forces every element to its visible end-state so that
+ * Divi entrance animations (which start at opacity:0 and transition via IntersectionObserver)
+ * don't hide content from axe before the analysis runs.
  */
 function runAxeInIframe( iframe, axeUrl ) {
 	return new Promise( ( resolve, reject ) => {
 		const timer = setTimeout( () => reject( new Error( 'Scan timed out' ) ), SCAN_TIMEOUT_MS );
 
-		const script    = iframe.contentDocument.createElement( 'script' );
-		script.src      = axeUrl;
-		script.onload   = async () => {
+		// Guard: if the page didn't load (still at about:blank), bail early with a clear error.
+		const currentHref = iframe.contentWindow?.location?.href ?? '';
+		if ( ! currentHref || currentHref === 'about:blank' ) {
+			clearTimeout( timer );
+			reject( new Error( `iframe did not load the page (href: ${ currentHref || 'empty' })` ) );
+			return;
+		}
+
+		// Force all entrance animations to their completed/visible state so axe sees a
+		// fully-rendered page regardless of whether Divi's IntersectionObserver has fired.
+		try {
+			const style = iframe.contentDocument.createElement( 'style' );
+			style.textContent = '*, *::before, *::after { opacity: 1 !important; visibility: visible !important; animation: none !important; transition: none !important; }';
+			iframe.contentDocument.head.appendChild( style );
+		} catch ( e ) { /* cross-origin guard — should never happen on same-origin scans */ }
+
+		const script  = iframe.contentDocument.createElement( 'script' );
+		script.src    = axeUrl;
+		script.onload = async () => {
 			try {
+				// Diagnostic: check actual page content in the iframe
+				const h1s = [ ...iframe.contentDocument.querySelectorAll( 'h1' ) ];
+				console.log( '[Trailproof] iframe href:', iframe.contentWindow.location.href );
+				console.log( '[Trailproof] iframe title:', iframe.contentDocument.title );
+				console.log( '[Trailproof] h1 count:', h1s.length );
+				console.log( '[Trailproof] iframe body snippet:', iframe.contentDocument.body?.innerHTML?.trim().slice( 0, 300 ) );
+
 				const results = await iframe.contentWindow.axe.run();
 				clearTimeout( timer );
 				resolve( results );
@@ -27,7 +54,7 @@ function runAxeInIframe( iframe, axeUrl ) {
 				reject( err );
 			}
 		};
-		script.onerror  = () => {
+		script.onerror = () => {
 			clearTimeout( timer );
 			reject( new Error( 'Failed to load axe-core' ) );
 		};
@@ -41,7 +68,10 @@ function runAxeInIframe( iframe, axeUrl ) {
 function loadIframe( url ) {
 	return new Promise( ( resolve, reject ) => {
 		const iframe     = document.createElement( 'iframe' );
-		iframe.style.cssText = 'position:fixed;top:-9999px;left:-9999px;width:1280px;height:900px;visibility:hidden;';
+		// clip-path hides the iframe visually while keeping it fully active.
+		// visibility:hidden causes Firefox to skip loading the URL entirely (the frame
+		// stays at about:blank), so we use clip-path instead.
+		iframe.style.cssText = 'position:fixed;top:-9999px;left:-9999px;width:1280px;height:900px;clip-path:inset(100%);';
 		iframe.setAttribute( 'aria-hidden', 'true' );
 		iframe.setAttribute( 'tabindex', '-1' );
 
@@ -51,17 +81,25 @@ function loadIframe( url ) {
 		}, 20_000 );
 
 		iframe.onload = () => {
+			// Firefox fires a load event for the initial about:blank document the moment
+			// the iframe is appended to the DOM, before the real URL loads. Guard against
+			// resolving too early — wait for the actual page.
+			if ( iframe.contentWindow?.location?.href === 'about:blank' ) {
+				return;
+			}
 			clearTimeout( timer );
 			resolve( iframe );
 		};
 		iframe.onerror = () => {
 			clearTimeout( timer );
-			document.body.removeChild( iframe );
+			if ( iframe.parentNode ) iframe.parentNode.removeChild( iframe );
 			reject( new Error( 'Iframe failed to load' ) );
 		};
 
-		document.body.appendChild( iframe );
+		// Set src BEFORE appending so Firefox doesn't fire an extra load event for the
+		// initial about:blank state (which would resolve the promise prematurely).
 		iframe.src = url;
+		document.body.appendChild( iframe );
 	} );
 }
 
@@ -71,16 +109,13 @@ export default function Scan( { navigate } ) {
 	const [ currentIndex, setIndex ]      = useState( 0 );
 	const [ done, setDone ]               = useState( false );
 	const [ errors, setErrors ]           = useState( [] );
-	const [ includeWave, setWave ]        = useState( false );
-	const [ includeGutenberg, setGb ]     = useState( false );
 	const [ includeElementor, setElem ]   = useState( false );
 	const [ focusPage, setFocusPage ]     = useState( null );
 	const abortRef = useRef( false );
 
-	const axeUrl         = window.trailproofData?.axeUrl ?? '';
-	const waveEnabled    = !! window.trailproofData?.waveEnabled;
-	const gbEnabled      = !! window.trailproofData?.gutenbergEnabled;
-	const elemEnabled    = !! window.trailproofData?.elementorEnabled;
+	const axeUrl      = window.trailproofData?.axeUrl ?? '';
+	const gbEnabled   = !! window.trailproofData?.gutenbergEnabled;
+	const elemEnabled = !! window.trailproofData?.elementorEnabled;
 
 	async function startScan() {
 		abortRef.current = false;
@@ -109,6 +144,7 @@ export default function Scan( { navigate } ) {
 			const { url, post_id, title } = pageList[ i ];
 
 			// axe-core scan (client-side iframe)
+			let iframe = null;
 			try {
 				const { scan_id } = await apiFetch( {
 					path:   '/trailproof/v1/scans',
@@ -116,9 +152,23 @@ export default function Scan( { navigate } ) {
 					data:   { url, post_id, provider: 'axe' },
 				} );
 
-				const iframe  = await loadIframe( url );
+				// Diagnostic: check response headers before loading in iframe
+				try {
+					const r = await fetch( url, { credentials: 'include' } );
+					console.log( '[Trailproof] X-Frame-Options:', r.headers.get( 'X-Frame-Options' ) );
+					console.log( '[Trailproof] CSP:', r.headers.get( 'Content-Security-Policy' ) );
+				} catch ( e ) { /* ignore */ }
+
+				iframe = await loadIframe( url );
 				const results = await runAxeInIframe( iframe, axeUrl );
 				document.body.removeChild( iframe );
+				iframe = null;
+
+				// Diagnostic — open browser DevTools console to see these
+				console.log( '[Trailproof] scanned:', url );
+				console.log( '[Trailproof] violations (' + ( results.violations?.length ?? 0 ) + '):', results.violations?.map( v => v.id ) );
+				console.log( '[Trailproof] passes (' + ( results.passes?.length ?? 0 ) + '):', results.passes?.map( v => v.id ) );
+				console.log( '[Trailproof] incomplete (' + ( results.incomplete?.length ?? 0 ) + '):', results.incomplete?.map( v => v.id ) );
 
 				await apiFetch( {
 					path:   `/trailproof/v1/scans/${ scan_id }/axe-results`,
@@ -127,23 +177,14 @@ export default function Scan( { navigate } ) {
 				} );
 			} catch ( err ) {
 				errs.push( `axe / ${ title ?? url }: ${ err.message }` );
-			}
-
-			// WAVE scan (server-side relay)
-			if ( includeWave && waveEnabled && ! abortRef.current ) {
-				try {
-					await apiFetch( {
-						path:   '/trailproof/v1/scans',
-						method: 'POST',
-						data:   { url, post_id, provider: 'wave', run_now: true },
-					} );
-				} catch ( err ) {
-					errs.push( `WAVE / ${ title ?? url }: ${ err.message }` );
+			} finally {
+				if ( iframe && iframe.parentNode ) {
+					iframe.parentNode.removeChild( iframe );
 				}
 			}
 
-			// Gutenberg scan (server-side DOMDocument)
-			if ( includeGutenberg && gbEnabled && ! abortRef.current ) {
+			// Gutenberg scan (server-side DOMDocument — always included)
+			if ( gbEnabled && ! abortRef.current ) {
 				try {
 					await apiFetch( {
 						path:   '/trailproof/v1/scans',
@@ -195,44 +236,18 @@ export default function Scan( { navigate } ) {
 			) }
 
 			{ /* Optional extras */ }
-			{ ( waveEnabled || gbEnabled || elemEnabled ) && (
+			{ elemEnabled && (
 				<div style={ { marginBottom: 16, padding: '12px 16px', background: '#f9f9f9', border: '1px solid #ddd', borderRadius: 4 } }>
 					<p style={ { margin: '0 0 10px', fontWeight: 600, fontSize: 13 } }>
 						{ __( 'Optional: run extra checks', 'trailproof' ) }
 					</p>
-
-					{ waveEnabled && (
-						<CheckboxControl
-							label={ __( 'Run a second independent check with WAVE (uses your API credits)', 'trailproof' ) }
-							checked={ includeWave }
-							onChange={ setWave }
-							__nextHasNoMarginBottom
-						/>
-					) }
-					{ gbEnabled && (
-						<CheckboxControl
-							label={ __( 'Also check Gutenberg blocks', 'trailproof' ) }
-							checked={ includeGutenberg }
-							onChange={ setGb }
-							__nextHasNoMarginBottom
-						/>
-					) }
-					{ elemEnabled && (
-						<CheckboxControl
-							label={ __( 'Also check Elementor widgets', 'trailproof' ) }
-							checked={ includeElementor }
-							onChange={ setElem }
-							__nextHasNoMarginBottom
-						/>
-					) }
+					<CheckboxControl
+						label={ __( 'Also check Elementor widgets', 'trailproof' ) }
+						checked={ includeElementor }
+						onChange={ setElem }
+						__nextHasNoMarginBottom
+					/>
 				</div>
-			) }
-
-			{ ! waveEnabled && (
-				<p style={ { fontSize: 12, color: '#646970', marginBottom: 16 } }>
-					{ __( 'Want a second opinion from WAVE? Add your WebAIM API key in ', 'trailproof' ) }
-					<a href="?page=trailproof-settings">{ __( 'Settings', 'trailproof' ) }</a>.
-				</p>
 			) }
 
 			<div style={ { display: 'flex', gap: 8, marginBottom: '1.5rem', flexWrap: 'wrap' } }>
@@ -283,8 +298,11 @@ export default function Scan( { navigate } ) {
 					<p style={ { margin: '0 0 10px', fontWeight: 600, fontSize: 13 } }>
 						{ __( 'Focus Order Preview', 'trailproof' ) }
 					</p>
-					<p style={ { margin: '0 0 12px', fontSize: 12, color: '#646970' } }>
-						{ __( 'Select a page to preview its keyboard focus order — all focusable elements listed in the sequence a keyboard user would encounter them.', 'trailproof' ) }
+					<p style={ { margin: '0 0 6px', fontSize: 12, color: '#646970', lineHeight: 1.6 } }>
+						{ __( 'Keyboard and assistive-technology users navigate by pressing Tab — they never use a mouse. The order in which Tab moves between links, buttons, and form fields must match the visual reading order of the page, otherwise users lose their place or reach controls in the wrong sequence.', 'trailproof' ) }
+					</p>
+					<p style={ { margin: '0 0 12px', fontSize: 12, color: '#646970', lineHeight: 1.6 } }>
+						{ __( 'Select a page below to open a side-by-side preview: the left panel lists every focusable element numbered in the exact Tab order a keyboard user would encounter, and the right panel shows the live page so you can compare the sequence against the visual layout.', 'trailproof' ) }
 					</p>
 
 					<div style={ { display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' } }>

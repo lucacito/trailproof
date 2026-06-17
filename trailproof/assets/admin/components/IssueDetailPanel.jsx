@@ -67,6 +67,15 @@ const RULE_META = {
 		why: 'Skipped heading levels (e.g. h1 → h3) break the document outline that screen reader users rely on to navigate and understand page structure quickly.',
 		how: 'This requires human judgment — heading hierarchy reflects content meaning, so you review and correct the level for each heading in the decision screen.',
 	},
+	'page-has-heading-one': {
+		why: 'Screen reader users navigate pages by jumping between headings. Without an h1, there is no clear primary topic anchor — users have no efficient way to confirm they are on the right page or skip to the main content.',
+		how: 'Add an h1 to the page that names the primary topic. If one already exists, confirm it is not hidden from the accessibility tree (e.g. via display:none or aria-hidden). Re-scan after adding it to clear this issue.',
+	},
+
+	'input-no-autocomplete': {
+		why: 'Form fields for email, phone, and name without autocomplete attributes force users to type the same information repeatedly. For users with cognitive disabilities, motor impairments, or who rely on autofill software, this can make forms unusable.',
+		how: 'Trailproof adds the appropriate autocomplete attribute (email, tel, given-name, family-name, or name) to each matching input at render time, derived from the field\'s type and name attributes.',
+	},
 
 	// Divi module patterns
 	'divi-accordion': {

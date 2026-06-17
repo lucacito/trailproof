@@ -104,7 +104,8 @@ class StaticProvider implements ScanProvider {
 			$this->check_labels( $xpath, $url, $post_id ),
 			$this->check_landmarks( $xpath, $url, $post_id ),
 			$this->check_divi_widgets( $xpath, $url, $post_id ),
-			$this->check_pdf_links( $xpath, $url, $post_id )
+			$this->check_pdf_links( $xpath, $url, $post_id ),
+			$this->check_form_autocomplete( $xpath, $url, $post_id )
 		);
 	}
 
@@ -173,9 +174,17 @@ class StaticProvider implements ScanProvider {
 	}
 
 	private function check_headings( DOMXPath $xpath, string $url, int $post_id ): array {
-		$nodes = $xpath->query( '//h1|//h2|//h3|//h4|//h5|//h6' );
+		$issues = [];
+		$nodes  = $xpath->query( '//h1|//h2|//h3|//h4|//h5|//h6' );
+
+		// Missing h1 — page-has-heading-one
+		$h1_nodes = $xpath->query( '//h1' );
+		if ( ! $h1_nodes || $h1_nodes->length === 0 ) {
+			$issues[] = $this->make_issue( 'body', 'page-has-heading-one', $url, $post_id, 'moderate' );
+		}
+
 		if ( ! $nodes || $nodes->length === 0 ) {
-			return [];
+			return $issues;
 		}
 
 		$levels = [];
@@ -187,12 +196,13 @@ class StaticProvider implements ScanProvider {
 		foreach ( $levels as $level ) {
 			if ( $prev > 0 && $level > $prev + 1 ) {
 				// Report the selector of the first offending heading
-				return [ $this->make_issue( "h{$level}", 'heading-order', $url, $post_id, 'moderate' ) ];
+				$issues[] = $this->make_issue( "h{$level}", 'heading-order', $url, $post_id, 'moderate' );
+				break;
 			}
 			$prev = $level;
 		}
 
-		return [];
+		return $issues;
 	}
 
 	private function check_labels( DOMXPath $xpath, string $url, int $post_id ): array {
@@ -370,6 +380,40 @@ class StaticProvider implements ScanProvider {
 			$seen[ $href ] = true;
 			$selector      = $this->build_selector( $node );
 			$issues[]      = $this->make_issue( $selector, 'pdf-untagged-link', $url, $post_id, 'serious' );
+		}
+
+		return $issues;
+	}
+
+	/**
+	 * Flag inputs that are missing autocomplete attributes for common data types.
+	 * Covers email, phone, and name fields — the most audited under WCAG 1.3.5.
+	 */
+	private function check_form_autocomplete( DOMXPath $xpath, string $url, int $post_id ): array {
+		$issues = [];
+		$lc     = 'translate(@name,"ABCDEFGHIJKLMNOPQRSTUVWXYZ","abcdefghijklmnopqrstuvwxyz")';
+		$nodes  = $xpath->query(
+			"//input[not(@autocomplete) and not(@type='hidden') and not(@type='submit') and not(@type='button') and not(@type='reset') and (" .
+			"  @type='email' or @type='tel' or" .
+			"  contains({$lc},'email') or contains({$lc},'phone') or contains({$lc},'tel') or contains({$lc},'name')" .
+			")]"
+		);
+
+		if ( ! $nodes ) {
+			return [];
+		}
+
+		foreach ( $nodes as $node ) {
+			if ( ! ( $node instanceof DOMElement ) ) {
+				continue;
+			}
+			$issues[] = $this->make_issue(
+				$this->build_selector( $node ),
+				'input-no-autocomplete',
+				$url,
+				$post_id,
+				'moderate'
+			);
 		}
 
 		return $issues;

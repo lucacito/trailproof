@@ -131,9 +131,27 @@ class ScanRoutes {
 		}
 
 		$violations = is_array( $results['violations'] ?? null ) ? $results['violations'] : [];
-		$count      = 0;
-		$critical   = 0;
-		$serious    = 0;
+
+		// axe-core marks color-contrast as "incomplete" (not "violation") when it cannot
+		// determine the background color — e.g. background-image or CSS gradient.  Ingest
+		// those too so they surface in the decision queue, flagged for human review.
+		$incomplete_contrast_rules = [ 'color-contrast', 'color-contrast-enhanced' ];
+		foreach ( is_array( $results['incomplete'] ?? null ) ? $results['incomplete'] : [] as $item ) {
+			if ( in_array( $item['id'] ?? '', $incomplete_contrast_rules, true ) ) {
+				// Tag each node so the UI can surface the "could not auto-verify" context.
+				if ( is_array( $item['nodes'] ?? null ) ) {
+					foreach ( $item['nodes'] as &$node ) {
+						$node['_incomplete'] = true;
+					}
+					unset( $node );
+				}
+				$violations[] = $item;
+			}
+		}
+
+		$count   = 0;
+		$critical = 0;
+		$serious  = 0;
 
 		foreach ( $violations as $violation ) {
 			if ( ! is_array( $violation ) ) {
@@ -167,17 +185,33 @@ class ScanRoutes {
 
 				$fingerprint = Fingerprint::compute( $selector, $rule_id, $post_id, $url );
 
+				// axe-core stores per-check data inside the node's any/all arrays, not at node.data.
+				// Find the first check entry that carries color info (color-contrast rule).
+				$check_data = [];
+				foreach ( array_merge( $node['any'] ?? [], $node['all'] ?? [] ) as $check ) {
+					if ( isset( $check['data']['fgColor'] ) ) {
+						$check_data = $check['data'];
+						break;
+					}
+				}
+
 				// Capture per-node data for the decision UI (contrast colors, HTML snippet)
 				$node_data = array_filter( [
-					'html'             => sanitize_text_field( $node['html'] ?? '' ),
-					'failure_summary'  => sanitize_text_field( $node['failureSummary'] ?? '' ),
-					'fg_color'         => sanitize_text_field( $node['data']['fgColor'] ?? '' ),
-					'bg_color'         => sanitize_text_field( $node['data']['bgColor'] ?? '' ),
-					'contrast_ratio'   => is_numeric( $node['data']['contrastRatio'] ?? null )
-						? (float) $node['data']['contrastRatio'] : null,
-					'font_size'        => sanitize_text_field( $node['data']['fontSize'] ?? '' ),
-					'font_weight'      => sanitize_text_field( $node['data']['fontWeight'] ?? '' ),
+					'html'           => sanitize_text_field( $node['html'] ?? '' ),
+					'failure_summary' => sanitize_text_field( $node['failureSummary'] ?? '' ),
+					'fg_color'       => sanitize_text_field( $check_data['fgColor'] ?? '' ),
+					'bg_color'       => sanitize_text_field( $check_data['bgColor'] ?? '' ),
+					'contrast_ratio' => is_numeric( $check_data['contrastRatio'] ?? null )
+						? (float) $check_data['contrastRatio'] : null,
+					'font_size'      => sanitize_text_field( $check_data['fontSize'] ?? '' ),
+					'font_weight'    => sanitize_text_field( $check_data['fontWeight'] ?? '' ),
+					'incomplete'     => ! empty( $node['_incomplete'] ),
 				] );
+
+				$base_description = $wcag['description'] ?? sanitize_text_field( $help );
+				$description      = ! empty( $node['_incomplete'] )
+					? '[Needs manual check] axe-core could not determine the background color (likely a CSS gradient or background-image). ' . $base_description
+					: $base_description;
 
 				$this->issue_repo->upsert( [
 					'scan_id'        => $scan_id,
@@ -190,7 +224,7 @@ class ScanRoutes {
 					'bucket'         => $bucket,
 					'severity'       => $severity,
 					'priority_score' => BucketClassifier::priority_score( $rule_id, $severity, $bucket ),
-					'description'    => $wcag['description'] ?? sanitize_text_field( $help ),
+					'description'    => $description,
 					'node_data_json' => ! empty( $node_data ) ? $node_data : null,
 					'provider'       => 'axe',
 				] );
@@ -202,11 +236,23 @@ class ScanRoutes {
 		}
 
 		$score = max( 0, 100 - ( $critical * 10 ) - ( $serious * 5 ) - ( ( $count - $critical - $serious ) * 2 ) );
+
+		// Auto-resolve: if axe-core passes a rule for this page, mark any stored open
+		// issues for that rule+page as fixed. This clears stale issues (e.g. page-has-heading-one
+		// when an h1 now exists) without requiring a manual status change.
+		$passes = is_array( $results['passes'] ?? null ) ? $results['passes'] : [];
+		foreach ( $passes as $pass ) {
+			$pass_rule = sanitize_key( $pass['id'] ?? '' );
+			if ( $pass_rule ) {
+				$this->issue_repo->mark_passed( $pass_rule, $post_id, $url );
+			}
+		}
+
 		$this->scan_repo->update_score( $scan_id, $score, [
 			'issue_count' => $count,
 			'critical'    => $critical,
 			'serious'     => $serious,
-			'passes'      => count( is_array( $results['passes'] ?? null ) ? $results['passes'] : [] ),
+			'passes'      => count( $passes ),
 		] );
 
 		return new \WP_REST_Response( [ 'stored' => $count ], 200 );

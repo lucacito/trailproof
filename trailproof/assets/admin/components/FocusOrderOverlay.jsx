@@ -123,9 +123,21 @@ export default function FocusOrderOverlay( { pageUrl, pageTitle } ) {
 							<Button variant="tertiary" onClick={ closePreview }>✕</Button>
 						</div>
 
-						<p style={ { fontSize: 12, color: '#646970', marginTop: 0, marginBottom: 12 } }>
+						<p style={ { fontSize: 12, color: '#646970', marginTop: 0, marginBottom: 8 } }>
 							{ pageTitle || pageUrl }
 						</p>
+
+						<div style={ { background: '#f6f7f7', border: '1px solid #e0e0e0', borderRadius: 4, padding: '10px 12px', marginBottom: 12 } }>
+							<p style={ { margin: '0 0 6px', fontSize: 11, fontWeight: 600, color: '#3c434a' } }>
+								{ __( 'How to read this list', 'trailproof' ) }
+							</p>
+							<ul style={ { margin: 0, paddingLeft: 16, fontSize: 11, color: '#646970', lineHeight: 1.6 } }>
+								<li>{ __( 'Each number is one Tab stop — the order a keyboard user reaches each control.', 'trailproof' ) }</li>
+								<li>{ __( 'Compare the sequence against the visual page on the right. The numbers should flow top-to-bottom, left-to-right, matching how a sighted reader would scan the page.', 'trailproof' ) }</li>
+								<li>{ __( 'Gaps or jumps in the sequence (e.g. a footer link appears at #3) usually mean a positive tabindex is forcing elements out of their natural order.', 'trailproof' ) }</li>
+								<li>{ __( 'Unlabelled or generic names ("button", "a") indicate elements that screen-reader users cannot identify — those need accessible names.', 'trailproof' ) }</li>
+							</ul>
+						</div>
 
 						{ loading && (
 							<div style={ { display: 'flex', alignItems: 'center', gap: 8, color: '#646970' } }>
@@ -181,14 +193,19 @@ export default function FocusOrderOverlay( { pageUrl, pageTitle } ) {
 						) ) }
 
 						{ ! loading && elements.length > 0 && (
-							<p style={ { fontSize: 12, color: '#646970', marginTop: 12 } }>
-								{ elements.length }{ ' ' }{ __( 'focusable elements', 'trailproof' ) }
+							<div style={ { marginTop: 12 } }>
+								<p style={ { fontSize: 12, color: '#646970', margin: '0 0 6px' } }>
+									{ elements.length }{ ' ' }{ __( 'focusable elements found.', 'trailproof' ) }
+								</p>
 								{ elements.some( ( el ) => /tabindex/i.test( el.selector ) ) && (
-									<span style={ { color: '#d63638' } }>
-										{ ' ' }·{ ' ' }{ __( 'positive tabindex detected — check focus order', 'trailproof' ) }
-									</span>
+									<div style={ { background: '#fcf0f1', border: '1px solid #d63638', borderRadius: 4, padding: '8px 10px', fontSize: 11, color: '#3c434a', lineHeight: 1.6 } }>
+										<strong style={ { color: '#d63638' } }>{ __( 'Positive tabindex detected', 'trailproof' ) }</strong>
+										<p style={ { margin: '4px 0 0' } }>
+											{ __( 'One or more elements use tabindex="1" or higher. This pulls those elements to the very front of the Tab sequence — before everything else on the page — which almost always breaks the natural reading order. The fix is to remove the positive tabindex values and let the DOM order control Tab navigation instead.', 'trailproof' ) }
+										</p>
+									</div>
 								) }
-							</p>
+							</div>
 						) }
 					</div>
 
