@@ -66,6 +66,7 @@ class Schema {
 	private static function migrate_v2(): void {
 		global $wpdb;
 
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
 		$column_exists = $wpdb->get_var( $wpdb->prepare(
 			"SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS
 			 WHERE TABLE_SCHEMA = DATABASE()

@@ -4,6 +4,9 @@ declare(strict_types=1);
 
 namespace Trailproof\Repository;
 
+// Custom plugin table; direct queries are required and caching not appropriate for correction records.
+// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+
 class CorrectionRepository {
 
 	private function table(): string {
@@ -102,6 +105,20 @@ class CorrectionRepository {
 			"SELECT * FROM {$wpdb->prefix}tp_corrections WHERE post_id = 0 AND enabled = 1 ORDER BY id ASC",
 			ARRAY_A
 		);
+	}
+
+	public function get_first_enabled_by_fingerprint( string $fingerprint ): ?array {
+		global $wpdb;
+
+		$row = $wpdb->get_row(
+			$wpdb->prepare(
+				"SELECT * FROM {$wpdb->prefix}tp_corrections WHERE fingerprint = %s AND enabled = 1 ORDER BY id DESC LIMIT 1",
+				$fingerprint
+			),
+			ARRAY_A
+		);
+
+		return $row ?: null;
 	}
 
 	public function get_by_id( int $id ): ?array {

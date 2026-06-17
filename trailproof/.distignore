@@ -1,0 +1,11 @@
+.git
+.gitignore
+.phpunit.result.cache
+CLAUDE.md
+README.md
+phpunit.xml.dist
+package.json
+package-lock.json
+node_modules
+assets/admin
+tests

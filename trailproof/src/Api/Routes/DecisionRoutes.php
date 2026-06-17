@@ -103,15 +103,24 @@ class DecisionRoutes {
 
 		$original = is_array( $params['original'] ?? null ) ? $params['original'] : [];
 
-		$correction_id = $this->correction_repo->create( [
-			'fingerprint'    => $fingerprint,
-			'post_id'        => (int) $issue['post_id'],
-			'url'            => $issue['url'],
-			'selector'       => $issue['selector'],
-			'transform_type' => $transform_type,
-			'payload'        => $payload,
-			'original'       => $original,
-		] );
+		// If a correction already exists for this fingerprint, update its payload rather than
+		// inserting a duplicate row — this handles the "revise a previous decision" flow.
+		$existing = $this->correction_repo->get_first_enabled_by_fingerprint( $fingerprint );
+
+		if ( $existing ) {
+			$this->correction_repo->update_payload( (int) $existing['id'], $payload );
+			$correction_id = (int) $existing['id'];
+		} else {
+			$correction_id = $this->correction_repo->create( [
+				'fingerprint'    => $fingerprint,
+				'post_id'        => (int) $issue['post_id'],
+				'url'            => $issue['url'],
+				'selector'       => $issue['selector'],
+				'transform_type' => $transform_type,
+				'payload'        => $payload,
+				'original'       => $original,
+			] );
+		}
 
 		$this->issue_repo->set_status( (int) $issue['id'], 'fixed' );
 
@@ -129,6 +138,7 @@ class DecisionRoutes {
 				'transform_type' => $transform_type,
 				'correction_id'  => $correction_id,
 				'payload'        => $payload,
+				'revised'        => (bool) $existing,
 			],
 			$note
 		);

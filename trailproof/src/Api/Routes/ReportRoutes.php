@@ -49,6 +49,7 @@ class ReportRoutes {
 	public function list_reports( \WP_REST_Request $request ): \WP_REST_Response {
 		global $wpdb;
 
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
 		$rows = (array) $wpdb->get_results(
 			$wpdb->prepare(
 				"SELECT id, type, generated_at, generated_by, snapshot_json
@@ -94,6 +95,7 @@ class ReportRoutes {
 		global $wpdb;
 
 		$id  = (int) $request->get_param( 'id' );
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
 		$row = $wpdb->get_row(
 			$wpdb->prepare(
 				"SELECT * FROM {$wpdb->prefix}tp_reports WHERE id = %d",
@@ -130,6 +132,7 @@ class ReportRoutes {
 		header( 'Cache-Control: no-store, no-cache, must-revalidate' );
 		header( 'Pragma: no-cache' );
 		@ob_end_clean();
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_readfile
 		readfile( $file_path );
 		exit;
 	}

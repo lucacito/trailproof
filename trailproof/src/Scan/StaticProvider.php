@@ -44,7 +44,11 @@ class StaticProvider implements ScanProvider {
 	public function scan( string $url, int $post_id ): ?int {
 		$response = wp_remote_get(
 			$url,
-			[ 'timeout' => 30, 'sslverify' => false, 'redirection' => 3 ]
+			[
+				'timeout'     => 30,
+				'sslverify'   => apply_filters( 'trailproof_http_sslverify', true ),
+				'redirection' => 3,
+			]
 		);
 
 		if ( is_wp_error( $response ) || wp_remote_retrieve_response_code( $response ) !== 200 ) {

@@ -4,6 +4,9 @@ declare(strict_types=1);
 
 namespace Trailproof\Integrations\Divi;
 
+// Direct DB queries against wp_posts are required; caching not appropriate here.
+// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+
 /**
  * Detects whether Divi (theme or builder plugin) is active on this installation,
  * and which Divi module types appear in published post content.

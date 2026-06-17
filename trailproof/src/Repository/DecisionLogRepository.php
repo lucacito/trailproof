@@ -4,6 +4,9 @@ declare(strict_types=1);
 
 namespace Trailproof\Repository;
 
+// Custom plugin table; direct queries are required and caching not appropriate for audit logs.
+// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+
 /**
  * Append-only write access to tp_decisions_log.
  * Never call UPDATE or DELETE on this table — it is the immutable evidence trail.

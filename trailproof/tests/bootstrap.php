@@ -1,4 +1,5 @@
 <?php
+// phpcs:disable WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedFunctionFound -- stubs for WP core functions used in unit tests
 
 declare(strict_types=1);
 
@@ -12,7 +13,7 @@ require_once dirname(__DIR__) . '/vendor/autoload.php';
 
 if (!function_exists('sanitize_text_field')) {
     function sanitize_text_field(string $str): string {
-        return trim(strip_tags($str));
+        return trim(strip_tags($str)); // phpcs:ignore WordPress.WP.AlternativeFunctions.strip_tags_strip_tags
     }
 }
 
@@ -30,7 +31,7 @@ if (!function_exists('sanitize_html_class')) {
 
 if (!function_exists('wp_parse_url')) {
     function wp_parse_url(string $url, int $component = -1): mixed {
-        return parse_url($url, $component);
+        return parse_url($url, $component); // phpcs:ignore WordPress.WP.AlternativeFunctions.parse_url_parse_url
     }
 }
 
@@ -72,7 +73,7 @@ if (!function_exists('get_current_user_id')) {
 
 if (!function_exists('current_time')) {
     function current_time(string $type): string {
-        return date('Y-m-d H:i:s');
+        return gmdate('Y-m-d H:i:s'); // phpcs:ignore WordPress.DateTime.RestrictedFunctions.date_date
     }
 }
 

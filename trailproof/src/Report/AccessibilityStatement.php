@@ -21,9 +21,9 @@ class AccessibilityStatement {
 	 * Language deliberately avoids "ADA", "fully compliant", or "lawsuit-proof".
 	 */
 	public function generate(): string {
-		$site_name    = esc_html( get_bloginfo( 'name' ) );
+		$site_name    = get_bloginfo( 'name' );
 		$site_url     = esc_url( home_url() );
-		$contact      = esc_html( get_option( 'admin_email', '' ) );
+		$contact      = get_option( 'admin_email', '' );
 		$date         = wp_date( 'F j, Y' );
 		$last_scan    = $this->scan_repo->get_last_scan_at();
 		$scan_date    = $last_scan ? wp_date( 'F j, Y', strtotime( $last_scan ) ) : __( 'Not yet scanned', 'trailproof' );
@@ -41,7 +41,9 @@ class AccessibilityStatement {
 <html lang="<?php echo esc_attr( get_bloginfo( 'language' ) ); ?>">
 <head>
 <meta charset="UTF-8">
-<title><?php printf( esc_html__( 'Accessibility Statement — %s', 'trailproof' ), $site_name ); ?></title>
+<title><?php
+		/* translators: %s: site name */
+		printf( esc_html__( 'Accessibility Statement — %s', 'trailproof' ), esc_html( $site_name ) ); ?></title>
 <style>
   body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; max-width: 800px; margin: 2rem auto; padding: 0 1rem; color: #1d2327; line-height: 1.6; }
   h1 { border-bottom: 2px solid #e0e0e0; padding-bottom: .5rem; }
@@ -54,17 +56,23 @@ class AccessibilityStatement {
 </head>
 <body>
 
-<h1><?php printf( esc_html__( 'Accessibility Statement for %s', 'trailproof' ), $site_name ); ?></h1>
+<h1><?php
+/* translators: %s: site name */
+printf( esc_html__( 'Accessibility Statement for %s', 'trailproof' ), esc_html( $site_name ) ); ?></h1>
 
-<p><?php printf(
+<p><?php
+/* translators: %s: site name */
+printf(
 	esc_html__( '%s is committed to ensuring digital accessibility for people of all abilities, including those with visual, auditory, motor, and cognitive disabilities. We actively work to improve our website in accordance with the Web Content Accessibility Guidelines (WCAG) 2.1, Level AA.', 'trailproof' ),
-	$site_name
+	esc_html( $site_name )
 ); ?></p>
 
 <h2><?php esc_html_e( 'Conformance Status', 'trailproof' ); ?></h2>
-<p><?php printf(
-	esc_html__( '%s is %s with WCAG 2.1 Level AA. "Partially conformant" means that some parts of the content do not fully conform to the accessibility standard.', 'trailproof' ),
-	$site_name,
+<p><?php
+/* translators: 1: site name, 2: conformance status wrapped in <strong> tags */
+printf(
+	esc_html__( '%1$s is %2$s with WCAG 2.1 Level AA. "Partially conformant" means that some parts of the content do not fully conform to the accessibility standard.', 'trailproof' ),
+	esc_html( $site_name ),
 	'<strong>' . esc_html__( 'partially conformant', 'trailproof' ) . '</strong>'
 ); ?></p>
 <p><?php esc_html_e( 'We are engaged in systematic, documented remediation to increase conformance. This statement documents that ongoing effort.', 'trailproof' ); ?></p>
@@ -79,9 +87,11 @@ class AccessibilityStatement {
 <p><?php esc_html_e( 'These technologies are relied upon for conformance with the accessibility standard used.', 'trailproof' ); ?></p>
 
 <h2><?php esc_html_e( 'Assessment Approach', 'trailproof' ); ?></h2>
-<p><?php printf(
+<p><?php
+/* translators: %s: site name */
+printf(
 	esc_html__( '%s assessed the accessibility of this website through:', 'trailproof' ),
-	$site_name
+	esc_html( $site_name )
 ); ?></p>
 <ul>
   <li><?php esc_html_e( 'Automated evaluation using axe-core (Deque Systems)', 'trailproof' ); ?></li>
@@ -91,9 +101,11 @@ class AccessibilityStatement {
 <p class="meta"><?php esc_html_e( 'Note: automated testing typically detects approximately one-third of WCAG success criteria. Manual evaluation addresses the remainder.', 'trailproof' ); ?></p>
 
 <h2><?php esc_html_e( 'Remediation Summary', 'trailproof' ); ?></h2>
-<p><?php printf(
+<p><?php
+/* translators: %s: date of most recent accessibility evaluation */
+printf(
 	esc_html__( 'Most recent evaluation: %s', 'trailproof' ),
-	'<strong>' . $scan_date . '</strong>'
+	'<strong>' . esc_html( $scan_date ) . '</strong>'
 ); ?></p>
 
 <table>
@@ -120,12 +132,12 @@ class AccessibilityStatement {
     </tr>
     <tr>
       <td><strong><?php esc_html_e( 'Currently open', 'trailproof' ); ?></strong></td>
-      <td><strong><?php echo $open; ?></strong></td>
+      <td><strong><?php echo (int) $open; ?></strong></td>
       <td><?php esc_html_e( 'Known open issues under active remediation.', 'trailproof' ); ?></td>
     </tr>
     <tr>
       <td><?php esc_html_e( 'Remediated', 'trailproof' ); ?></td>
-      <td><?php echo $fixed; ?></td>
+      <td><?php echo (int) $fixed; ?></td>
       <td><?php esc_html_e( 'Issues corrected and confirmed.', 'trailproof' ); ?></td>
     </tr>
   </tbody>
@@ -143,7 +155,9 @@ class AccessibilityStatement {
 <h2><?php esc_html_e( 'Feedback and Contact', 'trailproof' ); ?></h2>
 <p><?php esc_html_e( 'We welcome feedback on the accessibility of this website. If you encounter barriers or have difficulty accessing content, please contact us:', 'trailproof' ); ?></p>
 <?php if ( $contact ) : ?>
-<p><?php printf( esc_html__( 'Email: %s', 'trailproof' ), '<a href="mailto:' . esc_attr( $contact ) . '">' . $contact . '</a>' ); ?></p>
+<p><?php
+/* translators: %s: email address as a mailto hyperlink */
+printf( esc_html__( 'Email: %s', 'trailproof' ), '<a href="mailto:' . esc_attr( $contact ) . '">' . esc_html( $contact ) . '</a>' ); ?></p>
 <?php endif; ?>
 <p><?php esc_html_e( 'We aim to respond to accessibility feedback within 2 business days.', 'trailproof' ); ?></p>
 
@@ -152,8 +166,12 @@ class AccessibilityStatement {
 
 <hr>
 <p class="meta">
-  <?php printf( esc_html__( 'Statement prepared: %s', 'trailproof' ), $date ); ?><br>
-  <?php printf( esc_html__( 'Last evaluated: %s', 'trailproof' ), $scan_date ); ?>
+  <?php
+  /* translators: %s: date the accessibility statement was prepared */
+  printf( esc_html__( 'Statement prepared: %s', 'trailproof' ), esc_html( $date ) ); ?><br>
+  <?php
+  /* translators: %s: date of the last accessibility evaluation */
+  printf( esc_html__( 'Last evaluated: %s', 'trailproof' ), esc_html( $scan_date ) ); ?>
   <?php if ( ! $white_label ) : ?><br>
   <?php esc_html_e( 'Accessibility monitoring powered by Trailproof.', 'trailproof' ); ?>
   <?php endif; ?>

@@ -44,12 +44,12 @@ class SuggestionService {
 		);
 
 		if ( is_wp_error( $response ) ) {
-			throw new \RuntimeException( 'API request failed: ' . $response->get_error_message() );
+			throw new \RuntimeException( 'API request failed: ' . $response->get_error_message() ); // phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped
 		}
 
 		$code = wp_remote_retrieve_response_code( $response );
 		if ( $code !== 200 ) {
-			throw new \RuntimeException( 'API returned HTTP ' . $code );
+			throw new \RuntimeException( 'API returned HTTP ' . $code ); // phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped
 		}
 
 		$body = json_decode( wp_remote_retrieve_body( $response ), true );

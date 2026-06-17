@@ -5,6 +5,7 @@
  * Description: Accessibility remediation and audit trail for Divi. Applies real source-level fixes as a non-destructive, fully revertable layer and produces a dated evidence package.
  * Version:     0.1.0
  * Author:      Trailproof
+ * Author URI:  https://trailproof.io
  * Text Domain: trailproof
  * Domain Path: /languages
  * Requires at least: 6.4

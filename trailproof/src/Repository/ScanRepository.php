@@ -4,6 +4,9 @@ declare(strict_types=1);
 
 namespace Trailproof\Repository;
 
+// Custom plugin table; direct queries are required and caching not appropriate for scan records.
+// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+
 class ScanRepository {
 
 	public function create( string $url, int $post_id, string $provider ): int {

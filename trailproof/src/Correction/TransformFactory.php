@@ -31,7 +31,7 @@ class TransformFactory {
 			'add_aria_label'           => new AddAriaLabelTransform(),
 			'add_aria_role'            => new AddAriaRoleTransform(),
 			'widget_aria_pattern'      => new WidgetAriaPatternTransform(),
-			default                    => throw new \InvalidArgumentException( "Unknown transform type: {$type}" ),
+			default                    => throw new \InvalidArgumentException( "Unknown transform type: {$type}" ), // phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped
 		};
 	}
 

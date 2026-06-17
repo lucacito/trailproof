@@ -56,6 +56,7 @@ class DashboardRoutes {
 
 		// Deduplicated recent activity: group same (action, fingerprint) pairs,
 		// keep the latest occurrence, expose repeat_count for the UI.
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
 		$recent_activity = (array) $wpdb->get_results(
 			$wpdb->prepare(
 				"SELECT
@@ -79,6 +80,7 @@ class DashboardRoutes {
 		);
 
 		// Stepper flags: has the user generated a statement / bundle?
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
 		$report_types = (array) $wpdb->get_results(
 			"SELECT type FROM {$wpdb->prefix}tp_reports GROUP BY type",
 			ARRAY_A

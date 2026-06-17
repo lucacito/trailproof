@@ -4,6 +4,9 @@ declare(strict_types=1);
 
 namespace Trailproof\Integrations\Divi;
 
+// Custom plugin table; direct queries required. Table names from $wpdb->prefix are safe.
+// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+
 use Trailproof\Integrations\BuilderIntegration;
 
 /**
@@ -126,6 +129,7 @@ class DiviAnalysisService implements BuilderIntegration {
 		global $wpdb;
 
 		$table = $wpdb->prefix . 'tp_corrections';
+		// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter
 		$rows  = $wpdb->get_col(
 			"SELECT DISTINCT payload_json FROM {$table}
 			 WHERE transform_type = 'widget_aria_pattern'
@@ -150,6 +154,7 @@ class DiviAnalysisService implements BuilderIntegration {
 		global $wpdb;
 
 		$table = $wpdb->prefix . 'tp_corrections';
+		// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter
 		$rows  = $wpdb->get_results(
 			"SELECT payload_json, created_at, url
 			 FROM {$table}

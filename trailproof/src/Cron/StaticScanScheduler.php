@@ -145,6 +145,6 @@ class StaticScanScheduler {
 			$ran_at, $pages, $new, $reg, $open
 		);
 
-		printf( '<div class="notice notice-%s is-dismissible"><p>%s</p></div>', esc_attr( $type ), $msg );
+		printf( '<div class="notice notice-%s is-dismissible"><p>%s</p></div>', esc_attr( $type ), wp_kses_post( $msg ) );
 	}
 }

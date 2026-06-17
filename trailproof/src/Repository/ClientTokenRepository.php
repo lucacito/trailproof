@@ -4,6 +4,9 @@ declare(strict_types=1);
 
 namespace Trailproof\Repository;
 
+// Custom plugin table; direct queries are required and caching is not appropriate here.
+// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+
 class ClientTokenRepository {
 
 	private function table(): string {
@@ -39,6 +42,7 @@ class ClientTokenRepository {
 	public function find( string $token ): ?array {
 		global $wpdb;
 
+		// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
 		$row = $wpdb->get_row(
 			$wpdb->prepare(
 				"SELECT * FROM {$this->table()} WHERE token = %s AND revoked = 0",
@@ -64,6 +68,7 @@ class ClientTokenRepository {
 	public function list(): array {
 		global $wpdb;
 
+		// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
 		return (array) $wpdb->get_results(
 			"SELECT id, label, expires_at, revoked, created_by, created_at FROM {$this->table()} ORDER BY created_at DESC",
 			ARRAY_A

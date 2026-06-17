@@ -150,6 +150,7 @@ class CorrectionRoutes {
 
 	private function find_issue_id_by_fingerprint( string $fingerprint ): int {
 		global $wpdb;
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
 		return (int) $wpdb->get_var(
 			$wpdb->prepare(
 				"SELECT id FROM {$wpdb->prefix}tp_issues WHERE fingerprint = %s LIMIT 1",

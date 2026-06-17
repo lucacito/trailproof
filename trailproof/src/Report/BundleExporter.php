@@ -49,7 +49,7 @@ class BundleExporter {
 
 		$zip = new \ZipArchive();
 		if ( true !== $zip->open( $file_path, \ZipArchive::CREATE | \ZipArchive::OVERWRITE ) ) {
-			throw new \RuntimeException( 'Could not create ZIP file at: ' . $file_path );
+			throw new \RuntimeException( 'Could not create ZIP file at: ' . $file_path ); // phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped
 		}
 
 		$zip->addFromString( 'README.txt', $this->readme() );
@@ -62,6 +62,7 @@ class BundleExporter {
 
 		// Store metadata in tp_reports
 		global $wpdb;
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery
 		$wpdb->insert(
 			$wpdb->prefix . 'tp_reports',
 			[
@@ -88,27 +89,25 @@ class BundleExporter {
 	private function readme(): string {
 		$site = get_bloginfo( 'name' );
 		$date = wp_date( 'Y-m-d H:i:s T' );
-		return <<<TEXT
-Trailproof Accessibility Evidence Bundle
-Site:      {$site}
-Generated: {$date}
-
-Contents
---------
-accessibility-statement.html  Formatted accessibility statement (WCAG 2.1 AA)
-issues.csv                    All detected issues with WCAG mapping and status
-decisions.csv                 Append-only audit log of all remediation decisions
-scans.json                    Scan history (provider, timestamp, score, summary)
-README.txt                    This file
-
-Conformance framing
--------------------
-This site is engaged in systematic, documented remediation toward WCAG 2.1 Level AA.
-No claim of full or complete conformance is made. "Partially conformant" is the
-accurate characterisation where open issues remain.
-
-Do not represent this bundle as proof of 100% compliance.
-TEXT;
+		return "Trailproof Accessibility Evidence Bundle\n"
+			. "Site:      {$site}\n"
+			. "Generated: {$date}\n"
+			. "\n"
+			. "Contents\n"
+			. "--------\n"
+			. "accessibility-statement.html  Formatted accessibility statement (WCAG 2.1 AA)\n"
+			. "issues.csv                    All detected issues with WCAG mapping and status\n"
+			. "decisions.csv                 Append-only audit log of all remediation decisions\n"
+			. "scans.json                    Scan history (provider, timestamp, score, summary)\n"
+			. "README.txt                    This file\n"
+			. "\n"
+			. "Conformance framing\n"
+			. "-------------------\n"
+			. "This site is engaged in systematic, documented remediation toward WCAG 2.1 Level AA.\n"
+			. "No claim of full or complete conformance is made. \"Partially conformant\" is the\n"
+			. "accurate characterisation where open issues remain.\n"
+			. "\n"
+			. "Do not represent this bundle as proof of 100% compliance.\n";
 	}
 
 	private function statement(): string {

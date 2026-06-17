@@ -4,6 +4,9 @@ declare(strict_types=1);
 
 namespace Trailproof\Repository;
 
+// Custom plugin tables require direct queries; caching not appropriate for live issue data.
+// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+
 class IssueRepository {
 
 	private function table(): string {
@@ -22,9 +25,10 @@ class IssueRepository {
 		$table    = $this->table();
 		$provider = $data['provider'] ?? 'axe';
 
+		// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter
 		$existing = $wpdb->get_row(
 			$wpdb->prepare(
-				"SELECT id, status, confirmed_by_json FROM $table WHERE fingerprint = %s",  // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+				"SELECT id, status, confirmed_by_json FROM $table WHERE fingerprint = %s",
 				$data['fingerprint']
 			),
 			ARRAY_A
@@ -106,15 +110,18 @@ class IssueRepository {
 		$args[]    = $limit;
 		$args[]    = $offset;
 
-		// $table and $where_sql are not user-controlled — table is prefixed constant, where uses %placeholders.
-		// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQLPlaceholders.UnfinishedPrepare
-		return (array) $wpdb->get_results(
+		// $table is a prefixed constant; $where_sql is built from internal %s/%d placeholders only.
+		// phpcs:disable WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQLPlaceholders.ReplacementsWrongNumber, PluginCheck.Security.DirectDB.UnescapedDBParameter
+		$rows = (array) $wpdb->get_results(
 			$wpdb->prepare(
 				"SELECT * FROM $table WHERE $where_sql ORDER BY priority_score DESC, created_at DESC LIMIT %d OFFSET %d",
 				...$args
 			),
 			ARRAY_A
 		);
+		// phpcs:enable WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQLPlaceholders.ReplacementsWrongNumber, PluginCheck.Security.DirectDB.UnescapedDBParameter
+
+		return array_map( [ $this, 'enrich_page_title' ], $rows );
 	}
 
 	public function count_by_bucket(): array {
@@ -175,7 +182,13 @@ class IssueRepository {
 			ARRAY_A
 		);
 
-		return $row ?: null;
+		return $row ? $this->enrich_page_title( $row ) : null;
+	}
+
+	private function enrich_page_title( array $row ): array {
+		$post_id          = (int) ( $row['post_id'] ?? 0 );
+		$row['page_title'] = $post_id ? (string) get_the_title( $post_id ) : '';
+		return $row;
 	}
 
 	public function set_status( int $id, string $status ): void {
@@ -220,7 +233,7 @@ class IssueRepository {
 
 		$where_args[] = $limit;
 
-		// phpcs:disable WordPress.DB.PreparedSQL.InterpolatedNotPrepared,WordPress.DB.PreparedSQLPlaceholders.UnfinishedPrepare
+		// phpcs:disable WordPress.DB.PreparedSQL.InterpolatedNotPrepared,WordPress.DB.PreparedSQLPlaceholders.UnfinishedPrepare,WordPress.DB.PreparedSQLPlaceholders.ReplacementsWrongNumber,PluginCheck.Security.DirectDB.UnescapedDBParameter
 		$rows = (array) $wpdb->get_results(
 			$wpdb->prepare(
 				"SELECT

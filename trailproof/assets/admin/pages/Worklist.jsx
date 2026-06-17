@@ -243,7 +243,7 @@ function InstanceSubTable( { rule_id, bucket, onApply, onDecide, onApplyModal, s
 			<td></td>
 			<td style={ { paddingLeft: 16, color: '#50575e' } }>
 				<div style={ { fontSize: 12, color: '#1d2327', marginBottom: 2 } }>
-					{ urlPath( issue.url ) }
+					{ issue.page_title || urlPath( issue.url ) }
 				</div>
 				<div style={ { fontSize: 10, color: '#c3c4c7', fontFamily: 'monospace' } } title={ issue.selector }>
 					{ issue.selector?.length > 60 ? issue.selector.slice( 0, 60 ) + '…' : issue.selector }
@@ -268,6 +268,13 @@ function InstanceSubTable( { rule_id, bucket, onApply, onDecide, onApplyModal, s
 
 function InstanceAction( { issue, saving, onApply, onDecide, onApplyModal } ) {
 	if ( ! [ 'open', 'regressed' ].includes( issue.status ) ) {
+		if ( issue.bucket === 'B' ) {
+			return (
+				<Button variant="tertiary" isSmall onClick={ () => onDecide( issue ) }>
+					{ __( 'Revise', 'trailproof' ) }
+				</Button>
+			);
+		}
 		return <span style={ { fontSize: 11, color: '#8c959f' } }>{ issue.status }</span>;
 	}
 	if ( issue.bucket === 'A' ) {
@@ -486,7 +493,13 @@ export default function Worklist( { navigate } ) {
 	}
 
 	function handleDecisionSaved( updatedIssue ) {
-		markIssueFixed( updatedIssue.id, updatedIssue.rule_id );
+		const wasOpen = [ 'open', 'regressed' ].includes( decisionIssue?.status );
+		if ( wasOpen ) {
+			markIssueFixed( updatedIssue.id, updatedIssue.rule_id );
+		} else {
+			// Revision of an already-decided issue — refresh from server to get accurate counts
+			fetchGroups();
+		}
 		setDecisionIssue( null );
 		setDecisionGroup( null );
 	}
@@ -719,10 +732,10 @@ function GroupDecision( { group, onDone } ) {
 				<span style={ { fontSize: 13, color: '#646970' } }>
 					{ `Deciding ${ index + 1 } of ${ total }: ${ group.description || group.rule_id }` }
 				</span>
-				{ current?.url && (
+				{ ( current?.page_title || current?.url ) && (
 					<span style={ { fontSize: 12, color: '#8c959f' } }>
 						{ ' — ' }
-						{ ( () => { try { return new URL( current.url ).pathname; } catch { return current.url; } } )() }
+						{ current.page_title || ( () => { try { return new URL( current.url ).pathname; } catch { return current.url; } } )() }
 					</span>
 				) }
 			</div>
