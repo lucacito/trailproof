@@ -81,8 +81,10 @@ class AdminMenu {
 				'waveEnabled'      => ! empty( $settings['wave_api_key'] ),
 				'claudeEnabled'    => ! empty( $settings['claude_api_key'] ),
 				'whiteLabel'       => ! empty( $settings['white_label'] ),
+				'fixesEnabled'     => (bool) ( $settings['fixes_enabled'] ?? true ),
 				'gutenbergEnabled' => function_exists( 'use_block_editor_for_post_type' ),
 				'elementorEnabled' => defined( 'ELEMENTOR_VERSION' ) || class_exists( '\Elementor\Plugin' ),
+				'diviEnabled'      => defined( 'ET_BUILDER_VERSION' ) || function_exists( 'et_setup_theme' ),
 			]
 		);
 

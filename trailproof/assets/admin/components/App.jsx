@@ -1,51 +1,72 @@
 import { useState, useEffect, useCallback } from '@wordpress/element';
 import { __ } from '@wordpress/i18n';
 import apiFetch from '@wordpress/api-fetch';
-import Dashboard   from '../pages/Dashboard';
-import Scan        from '../pages/Scan';
-import Worklist    from '../pages/Worklist';
-import DecisionQueue from '../pages/DecisionQueue';
-import Checklist   from '../pages/Checklist';
-import Statement   from '../pages/Statement';
-import Reports     from '../pages/Reports';
-import ClientPortal from '../pages/ClientPortal';
+import Dashboard           from '../pages/Dashboard';
+import Scan                from '../pages/Scan';
+import Worklist            from '../pages/Worklist';
+import DecisionQueue       from '../pages/DecisionQueue';
+import Checklist           from '../pages/Checklist';
+import Statement           from '../pages/Statement';
+import Reports             from '../pages/Reports';
+import ClientPortal        from '../pages/ClientPortal';
+import RemediationSettings from '../pages/RemediationSettings';
+import ImpactComparison    from '../pages/ImpactComparison';
+import ContrastAnalyzer    from '../pages/ContrastAnalyzer';
+import ScanHistory         from '../pages/ScanHistory';
+import DiviEnhancements    from '../pages/DiviEnhancements';
 
 // ─── SVG icons ───────────────────────────────────────────────────────────────
 
 const I = { strokeLinecap: 'round', strokeLinejoin: 'round' };
 
-const IconOverview  = () => <svg width="15" height="15" viewBox="0 0 15 15" fill="none" stroke="currentColor" strokeWidth="1.5" {...I}><rect x="1" y="1" width="5" height="5" rx="1"/><rect x="9" y="1" width="5" height="5" rx="1"/><rect x="1" y="9" width="5" height="5" rx="1"/><rect x="9" y="9" width="5" height="5" rx="1"/></svg>;
-const IconScan      = () => <svg width="15" height="15" viewBox="0 0 15 15" fill="none" stroke="currentColor" strokeWidth="1.5" {...I}><circle cx="6.5" cy="6.5" r="4.5"/><line x1="10" y1="10" x2="14" y2="14"/></svg>;
-const IconFix       = () => <svg width="15" height="15" viewBox="0 0 15 15" fill="none" stroke="currentColor" strokeWidth="1.5" {...I}><path d="M8.5 1.5L2.5 8.5H7L6 13.5L12 6.5H7.5L8.5 1.5Z"/></svg>;
-const IconDecisions = () => <svg width="15" height="15" viewBox="0 0 15 15" fill="none" stroke="currentColor" strokeWidth="1.5" {...I}><line x1="7.5" y1="1" x2="7.5" y2="14"/><path d="M2 4.5l4 3-4 3"/><path d="M13 7.5l-4 3 4 3"/></svg>;
-const IconChecklist = () => <svg width="15" height="15" viewBox="0 0 15 15" fill="none" stroke="currentColor" strokeWidth="1.5" {...I}><polyline points="2,4 4,6 8,2"/><line x1="11" y1="4" x2="13" y2="4"/><polyline points="2,9 4,11 8,7"/><line x1="11" y1="9" x2="13" y2="9"/></svg>;
-const IconStatement = () => <svg width="15" height="15" viewBox="0 0 15 15" fill="none" stroke="currentColor" strokeWidth="1.5" {...I}><path d="M3 1h7l4 4v9H3V1z"/><polyline points="10,1 10,5 14,5"/><line x1="5" y1="7" x2="10" y2="7"/><line x1="5" y1="10" x2="10" y2="10"/></svg>;
-const IconReports   = () => <svg width="15" height="15" viewBox="0 0 15 15" fill="none" stroke="currentColor" strokeWidth="1.5" {...I}><rect x="1" y="4" width="13" height="10" rx="1"/><polyline points="4,4 4,1 11,1 11,4"/><line x1="5" y1="9" x2="10" y2="9"/></svg>;
-const IconPortal    = () => <svg width="15" height="15" viewBox="0 0 15 15" fill="none" stroke="currentColor" strokeWidth="1.5" {...I}><circle cx="7.5" cy="5" r="3"/><path d="M1 14c0-3.3 2.9-6 6.5-6s6.5 2.7 6.5 6"/></svg>;
-const IconCheck     = () => <svg width="10" height="10" viewBox="0 0 10 10" fill="none"><circle cx="5" cy="5" r="4.5" fill="#22c55e" fillOpacity=".2"/><polyline points="2.5,5 4,6.5 7.5,3" stroke="#22c55e" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>;
+const IconOverview   = () => <svg width="15" height="15" viewBox="0 0 15 15" fill="none" stroke="currentColor" strokeWidth="1.5" {...I}><rect x="1" y="1" width="5" height="5" rx="1"/><rect x="9" y="1" width="5" height="5" rx="1"/><rect x="1" y="9" width="5" height="5" rx="1"/><rect x="9" y="9" width="5" height="5" rx="1"/></svg>;
+const IconScan       = () => <svg width="15" height="15" viewBox="0 0 15 15" fill="none" stroke="currentColor" strokeWidth="1.5" {...I}><circle cx="6.5" cy="6.5" r="4.5"/><line x1="10" y1="10" x2="14" y2="14"/></svg>;
+const IconFix        = () => <svg width="15" height="15" viewBox="0 0 15 15" fill="none" stroke="currentColor" strokeWidth="1.5" {...I}><path d="M8.5 1.5L2.5 8.5H7L6 13.5L12 6.5H7.5L8.5 1.5Z"/></svg>;
+const IconDecisions  = () => <svg width="15" height="15" viewBox="0 0 15 15" fill="none" stroke="currentColor" strokeWidth="1.5" {...I}><line x1="7.5" y1="1" x2="7.5" y2="14"/><path d="M2 4.5l4 3-4 3"/><path d="M13 7.5l-4 3 4 3"/></svg>;
+const IconChecklist  = () => <svg width="15" height="15" viewBox="0 0 15 15" fill="none" stroke="currentColor" strokeWidth="1.5" {...I}><polyline points="2,4 4,6 8,2"/><line x1="11" y1="4" x2="13" y2="4"/><polyline points="2,9 4,11 8,7"/><line x1="11" y1="9" x2="13" y2="9"/></svg>;
+const IconStatement  = () => <svg width="15" height="15" viewBox="0 0 15 15" fill="none" stroke="currentColor" strokeWidth="1.5" {...I}><path d="M3 1h7l4 4v9H3V1z"/><polyline points="10,1 10,5 14,5"/><line x1="5" y1="7" x2="10" y2="7"/><line x1="5" y1="10" x2="10" y2="10"/></svg>;
+const IconReports    = () => <svg width="15" height="15" viewBox="0 0 15 15" fill="none" stroke="currentColor" strokeWidth="1.5" {...I}><rect x="1" y="4" width="13" height="10" rx="1"/><polyline points="4,4 4,1 11,1 11,4"/><line x1="5" y1="9" x2="10" y2="9"/></svg>;
+const IconPortal     = () => <svg width="15" height="15" viewBox="0 0 15 15" fill="none" stroke="currentColor" strokeWidth="1.5" {...I}><circle cx="7.5" cy="5" r="3"/><path d="M1 14c0-3.3 2.9-6 6.5-6s6.5 2.7 6.5 6"/></svg>;
+const IconContrast   = () => <svg width="15" height="15" viewBox="0 0 15 15" fill="none" stroke="currentColor" strokeWidth="1.5" {...I}><circle cx="7.5" cy="7.5" r="6"/><path d="M7.5 1.5v12" /><path d="M7.5 1.5A6 6 0 0 1 7.5 13.5Z" fill="currentColor" stroke="none"/></svg>;
+const IconCompare    = () => <svg width="15" height="15" viewBox="0 0 15 15" fill="none" stroke="currentColor" strokeWidth="1.5" {...I}><rect x="1" y="3" width="5" height="9" rx="1"/><rect x="9" y="3" width="5" height="9" rx="1"/><line x1="7.5" y1="5" x2="7.5" y2="10"/><polyline points="6,6 7.5,5 9,6"/></svg>;
+const IconHistory    = () => <svg width="15" height="15" viewBox="0 0 15 15" fill="none" stroke="currentColor" strokeWidth="1.5" {...I}><circle cx="7.5" cy="7.5" r="6"/><polyline points="7.5,4 7.5,7.5 10,9"/></svg>;
+const IconSettings   = () => <svg width="15" height="15" viewBox="0 0 15 15" fill="none" stroke="currentColor" strokeWidth="1.5" {...I}><circle cx="7.5" cy="7.5" r="2"/><path d="M7.5 1v2M7.5 12v2M1 7.5h2M12 7.5h2M2.9 2.9l1.4 1.4M10.7 10.7l1.4 1.4M2.9 12.1l1.4-1.4M10.7 4.3l1.4-1.4"/></svg>;
+const IconDivi       = () => <svg width="15" height="15" viewBox="0 0 15 15" fill="none" stroke="currentColor" strokeWidth="1.5" {...I}><rect x="1" y="1" width="13" height="13" rx="2"/><path d="M4 5h7M4 7.5h5M4 10h7"/></svg>;
+const IconCheck      = () => <svg width="10" height="10" viewBox="0 0 10 10" fill="none"><circle cx="5" cy="5" r="4.5" fill="#22c55e" fillOpacity=".2"/><polyline points="2.5,5 4,6.5 7.5,3" stroke="#22c55e" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>;
 
 // ─── Nav definition ───────────────────────────────────────────────────────────
+// section: groups items under a labelled divider ('workflow' | 'analysis' | 'tracking' | 'clients' | 'settings')
 
 const NAV = [
-	{ id: 'dashboard',    label: __( 'Overview',       'trailproof' ), Icon: IconOverview  },
-	{ id: 'scan',         label: __( 'Scan Site',      'trailproof' ), Icon: IconScan,      step: 1 },
-	{ id: 'worklist',     label: __( 'Fix Issues',     'trailproof' ), Icon: IconFix,       step: 2 },
-	{ id: 'decisions',    label: __( 'Decisions',      'trailproof' ), Icon: IconDecisions, step: 3 },
-	{ id: 'checklist',    label: __( 'Checklist',      'trailproof' ), Icon: IconChecklist, step: 4 },
-	{ id: 'statement',    label: __( 'Statement',      'trailproof' ), Icon: IconStatement, step: 5 },
-	{ id: 'reports',      label: __( 'Reports',        'trailproof' ), Icon: IconReports,   step: 6 },
-	{ id: 'clientPortal', label: __( 'Client Portal',  'trailproof' ), Icon: IconPortal    },
+	{ id: 'dashboard',           label: __( 'Overview',          'trailproof' ), Icon: IconOverview,  section: 'top' },
+	{ id: 'scan',                label: __( 'Scan Site',         'trailproof' ), Icon: IconScan,       section: 'workflow', step: 1 },
+	{ id: 'worklist',            label: __( 'Fix Issues',        'trailproof' ), Icon: IconFix,        section: 'workflow', step: 2 },
+	{ id: 'decisions',           label: __( 'Decisions',         'trailproof' ), Icon: IconDecisions,  section: 'workflow', step: 3 },
+	{ id: 'checklist',           label: __( 'Checklist',         'trailproof' ), Icon: IconChecklist,  section: 'workflow', step: 4 },
+	{ id: 'statement',           label: __( 'Statement',         'trailproof' ), Icon: IconStatement,  section: 'workflow', step: 5 },
+	{ id: 'reports',             label: __( 'Reports',           'trailproof' ), Icon: IconReports,    section: 'workflow', step: 6 },
+	{ id: 'diviEnhancements',    label: __( 'Divi 5',            'trailproof' ), Icon: IconDivi,       section: 'builder' },
+	{ id: 'contrast',            label: __( 'Color Contrast',    'trailproof' ), Icon: IconContrast,   section: 'analysis' },
+	{ id: 'impactComparison',    label: __( 'Impact Test',       'trailproof' ), Icon: IconCompare,    section: 'analysis' },
+	{ id: 'scanHistory',         label: __( 'Scan History',      'trailproof' ), Icon: IconHistory,    section: 'tracking' },
+	{ id: 'clientPortal',        label: __( 'Client Portal',     'trailproof' ), Icon: IconPortal,     section: 'clients' },
+	{ id: 'remediationSettings', label: __( 'Remediation',       'trailproof' ), Icon: IconSettings,   section: 'settings' },
 ];
 
 const PAGES = {
-	dashboard:    Dashboard,
-	scan:         Scan,
-	worklist:     Worklist,
-	decisions:    DecisionQueue,
-	checklist:    Checklist,
-	statement:    Statement,
-	reports:      Reports,
-	clientPortal: ClientPortal,
+	dashboard:           Dashboard,
+	diviEnhancements:    DiviEnhancements,
+	scan:                Scan,
+	worklist:            Worklist,
+	decisions:           DecisionQueue,
+	checklist:           Checklist,
+	statement:           Statement,
+	reports:             Reports,
+	clientPortal:        ClientPortal,
+	remediationSettings: RemediationSettings,
+	impactComparison:    ImpactComparison,
+	contrast:            ContrastAnalyzer,
+	scanHistory:         ScanHistory,
 };
 
 function getInitialPage() {
@@ -103,12 +124,12 @@ function NavButton( { id, label, Icon, step, active, done, navigate } ) {
 				alignItems: 'center',
 				gap:        9,
 				width:      '100%',
-				padding:    '8px 14px 8px 12px',
+				padding:    '7px 14px 7px 12px',
 				background: active ? 'rgba(255,255,255,0.1)' : 'none',
 				border:     'none',
 				borderLeft: `3px solid ${ active ? '#5B9CF6' : 'transparent' }`,
 				color:      active ? '#fff' : 'rgba(255,255,255,0.55)',
-				fontSize:   13,
+				fontSize:   12,
 				fontWeight: active ? 600 : 400,
 				cursor:     'pointer',
 				textAlign:  'left',
@@ -117,13 +138,13 @@ function NavButton( { id, label, Icon, step, active, done, navigate } ) {
 		>
 			{ step ? (
 				<span style={ {
-					width:          16,
-					height:         16,
+					width:          15,
+					height:         15,
 					borderRadius:   '50%',
 					flexShrink:     0,
 					background:     done ? '#22c55e' : active ? '#5B9CF6' : 'rgba(255,255,255,0.12)',
 					color:          '#fff',
-					fontSize:       9,
+					fontSize:       8,
 					fontWeight:     700,
 					display:        'flex',
 					alignItems:     'center',
@@ -142,7 +163,7 @@ function NavButton( { id, label, Icon, step, active, done, navigate } ) {
 function SectionLabel( { children } ) {
 	return (
 		<div style={ {
-			padding:       '10px 15px 3px',
+			padding:       '8px 15px 2px',
 			fontSize:      9,
 			fontWeight:    700,
 			color:         'rgba(255,255,255,0.28)',
@@ -155,13 +176,22 @@ function SectionLabel( { children } ) {
 }
 
 function NavDivider() {
-	return <div style={ { height: 1, background: 'rgba(255,255,255,0.07)', margin: '6px 0' } } />;
+	return <div style={ { height: 1, background: 'rgba(255,255,255,0.07)', margin: '5px 0' } } />;
 }
 
 function Sidebar( { page, navigate, status } ) {
-	const workflow    = NAV.filter( n => n.step );
-	const utilBefore  = NAV.filter( n => ! n.step && n.id !== 'clientPortal' );
-	const utilAfter   = NAV.filter( n => n.id === 'clientPortal' );
+	const top      = NAV.filter( n => n.section === 'top' );
+	const workflow = NAV.filter( n => n.section === 'workflow' );
+	const builder  = NAV.filter( n => n.section === 'builder' );
+	const analysis = NAV.filter( n => n.section === 'analysis' );
+	const tracking = NAV.filter( n => n.section === 'tracking' );
+	const clients  = NAV.filter( n => n.section === 'clients' );
+	const settings = NAV.filter( n => n.section === 'settings' );
+
+	const renderItems = ( items ) => items.map( ( { id, label, Icon, step } ) => (
+		<NavButton key={ id } id={ id } label={ label } Icon={ Icon } step={ step }
+			active={ page === id } done={ isStepDone( id, status ) } navigate={ navigate } />
+	) );
 
 	return (
 		<aside style={ {
@@ -172,10 +202,11 @@ function Sidebar( { page, navigate, status } ) {
 			flexDirection: 'column',
 			boxShadow:     '2px 0 8px rgba(0,0,0,0.15)',
 			zIndex:        1,
+			overflowY:     'auto',
 		} }>
 			{/* Brand */}
 			{ ! whiteLabel && (
-				<div style={ { padding: '18px 18px 14px', borderBottom: '1px solid rgba(255,255,255,0.08)' } }>
+				<div style={ { padding: '16px 18px 12px', borderBottom: '1px solid rgba(255,255,255,0.08)', flexShrink: 0 } }>
 					<div style={ { fontSize: 15, fontWeight: 700, color: '#fff', letterSpacing: '-0.2px' } }>Trailproof</div>
 					<div style={ { fontSize: 10, color: 'rgba(255,255,255,0.38)', marginTop: 2, textTransform: 'uppercase', letterSpacing: '0.08em' } }>Accessibility</div>
 				</div>
@@ -183,28 +214,30 @@ function Sidebar( { page, navigate, status } ) {
 
 			<nav aria-label={ __( 'Trailproof navigation', 'trailproof' ) } style={ { flex: 1, paddingTop: 4, paddingBottom: 4 } }>
 
-				{/* Utility: Overview */}
-				{ utilBefore.map( ( { id, label, Icon } ) => (
-					<NavButton key={ id } id={ id } label={ label } Icon={ Icon }
-						active={ page === id } done={ isStepDone( id, status ) } navigate={ navigate } />
-				) ) }
+				{ renderItems( top ) }
 
 				<NavDivider />
 				<SectionLabel>{ __( 'Workflow', 'trailproof' ) }</SectionLabel>
-
-				{/* Numbered workflow steps */}
-				{ workflow.map( ( { id, label, Icon, step } ) => (
-					<NavButton key={ id } id={ id } label={ label } Icon={ Icon } step={ step }
-						active={ page === id } done={ isStepDone( id, status ) } navigate={ navigate } />
-				) ) }
+				{ renderItems( workflow ) }
 
 				<NavDivider />
+				<SectionLabel>{ __( 'Builder Intelligence', 'trailproof' ) }</SectionLabel>
+				{ renderItems( builder ) }
 
-				{/* Utility: Client Portal */}
-				{ utilAfter.map( ( { id, label, Icon } ) => (
-					<NavButton key={ id } id={ id } label={ label } Icon={ Icon }
-						active={ page === id } done={ isStepDone( id, status ) } navigate={ navigate } />
-				) ) }
+				<NavDivider />
+				<SectionLabel>{ __( 'Analysis', 'trailproof' ) }</SectionLabel>
+				{ renderItems( analysis ) }
+
+				<NavDivider />
+				<SectionLabel>{ __( 'Tracking', 'trailproof' ) }</SectionLabel>
+				{ renderItems( tracking ) }
+
+				<NavDivider />
+				{ renderItems( clients ) }
+
+				<NavDivider />
+				<SectionLabel>{ __( 'Settings', 'trailproof' ) }</SectionLabel>
+				{ renderItems( settings ) }
 
 			</nav>
 

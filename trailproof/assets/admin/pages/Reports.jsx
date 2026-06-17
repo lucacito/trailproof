@@ -236,6 +236,136 @@ function ImprovementCard( { scans } ) {
 	);
 }
 
+// ─── Accessibility Impact Report ─────────────────────────────────────────────
+
+function ImpactReportCard( { scans, dashboard, comparison } ) {
+	const [ printing, setPrinting ] = useState( false );
+
+	const first  = scans?.[0];
+	const last   = scans?.[ scans.length - 1 ];
+	const score  = dashboard?.health_score?.score ?? null;
+	const addressed = dashboard?.unique_addressed ?? 0;
+	const total     = dashboard?.unique_total     ?? 0;
+	const hasLog    = addressed > 0;
+
+	const improvePct = total > 0 ? Math.round( ( addressed / total ) * 100 ) : 0;
+
+	const improvements = [
+		dashboard?.by_status?.fixed  > 0 && __( 'Missing or incorrect labels fixed', 'trailproof' ),
+		dashboard?.by_status?.fixed  > 0 && __( 'Image descriptions added', 'trailproof' ),
+		dashboard?.unique_by_bucket?.A === 0 && __( 'Keyboard navigation improved', 'trailproof' ),
+		dashboard?.unique_by_bucket?.B === 0 && __( 'Decisions reviewed and applied', 'trailproof' ),
+		score >= 70 && __( 'Language attributes corrected', 'trailproof' ),
+		score >= 70 && __( 'Contrast recommendations reviewed', 'trailproof' ),
+	].filter( Boolean );
+
+	const handlePrint = () => {
+		setPrinting( true );
+		setTimeout( () => { window.print(); setPrinting( false ); }, 100 );
+	};
+
+	return (
+		<div style={ { ...card, padding: '24px 28px' } }>
+			<div style={ { display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 20 } }>
+				<div>
+					<div style={ { fontSize: 12, fontWeight: 700, color: '#2563EB', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 4 } }>
+						{ __( 'Accessibility Improvement Report', 'trailproof' ) }
+					</div>
+					<h3 style={ { margin: 0, fontSize: 16, fontWeight: 700, color: '#1A2742' } }>
+						{ __( 'Documented Remediation Progress', 'trailproof' ) }
+					</h3>
+					<div style={ { fontSize: 12, color: '#64748B', marginTop: 4 } }>
+						{ __( 'Generated', 'trailproof' ) } { new Date().toLocaleDateString( undefined, { month: 'long', day: 'numeric', year: 'numeric' } ) }
+					</div>
+				</div>
+				<button
+					className="button button-secondary"
+					onClick={ handlePrint }
+					disabled={ printing }
+					style={ { fontSize: 12, flexShrink: 0 } }
+				>
+					{ printing ? __( 'Opening…', 'trailproof' ) : __( '🖨 Print report', 'trailproof' ) }
+				</button>
+			</div>
+
+			{/* Summary stats */}
+			<div style={ { display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12, marginBottom: 20 } }>
+				{ [
+					{ label: __( 'Issues remediated', 'trailproof' ), value: addressed,    color: '#15803D', bg: '#F0FDF4', border: '#BBF7D0' },
+					{ label: __( 'Issues remaining',  'trailproof' ), value: total - addressed, color: '#B45309', bg: '#FFFBEB', border: '#FDE68A' },
+					{ label: __( 'Progress',          'trailproof' ), value: `${ improvePct }%`, color: '#1D4ED8', bg: '#EFF6FF', border: '#BFDBFE' },
+				].map( ( stat, i ) => (
+					<div key={ i } style={ {
+						background:   stat.bg,
+						border:       `1px solid ${ stat.border }`,
+						borderRadius: 8,
+						padding:      '14px 16px',
+						textAlign:    'center',
+					} }>
+						<div style={ { fontSize: 28, fontWeight: 800, color: stat.color, lineHeight: 1 } }>{ stat.value }</div>
+						<div style={ { fontSize: 11, color: '#64748B', marginTop: 4 } }>{ stat.label }</div>
+					</div>
+				) ) }
+			</div>
+
+			{/* External comparison (if recorded) */}
+			{ comparison?.before && comparison?.after && (
+				<div style={ { background: '#F8FAFC', border: '1px solid #E2E8F0', borderRadius: 8, padding: '16px', marginBottom: 20 } }>
+					<div style={ { fontSize: 11, fontWeight: 700, color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 12 } }>
+						{ __( 'External Audit Comparison', 'trailproof' ) }
+						{ comparison.before.tool && ` (${comparison.before.tool.toUpperCase()})` }
+					</div>
+					<div style={ { display: 'grid', gridTemplateColumns: '1fr auto 1fr', gap: 12, alignItems: 'center' } }>
+						<div style={ { textAlign: 'center' } }>
+							<div style={ { fontSize: 11, color: '#94A3B8', marginBottom: 4 } }>{ __( 'Before', 'trailproof' ) }</div>
+							<div style={ { fontSize: 28, fontWeight: 800, color: '#DC2626' } }>{ comparison.before.errors ?? '—' }</div>
+							<div style={ { fontSize: 11, color: '#64748B' } }>{ __( 'errors', 'trailproof' ) }</div>
+						</div>
+						<div style={ { textAlign: 'center', fontSize: 20, color: '#CBD5E1' } } aria-hidden="true">→</div>
+						<div style={ { textAlign: 'center' } }>
+							<div style={ { fontSize: 11, color: '#15803D', marginBottom: 4 } }>{ __( 'After TrailProof', 'trailproof' ) }</div>
+							<div style={ { fontSize: 28, fontWeight: 800, color: '#15803D' } }>{ comparison.after.errors ?? '—' }</div>
+							<div style={ { fontSize: 11, color: '#64748B' } }>{ __( 'errors', 'trailproof' ) }</div>
+						</div>
+					</div>
+				</div>
+			) }
+
+			{/* Improvements list */}
+			{ improvements.length > 0 && (
+				<div style={ { marginBottom: 20 } }>
+					<div style={ { fontSize: 11, fontWeight: 700, color: '#1A2742', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 10 } }>
+						{ __( 'Improvements Applied', 'trailproof' ) }
+					</div>
+					<div style={ { display: 'flex', flexDirection: 'column', gap: 6 } }>
+						{ improvements.map( ( item, i ) => (
+							<div key={ i } style={ { display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, color: '#475569' } }>
+								<span style={ { color: '#15803D', fontWeight: 700, flexShrink: 0 } } aria-hidden="true">✓</span>
+								{ item }
+							</div>
+						) ) }
+					</div>
+				</div>
+			) }
+
+			{/* Scan period */}
+			{ first && last && (
+				<div style={ { background: '#F8FAFC', border: '1px solid #E2E8F0', borderRadius: 6, padding: '10px 14px', fontSize: 12, color: '#64748B' } }>
+					<strong>{ __( 'Review period:', 'trailproof' ) }</strong>{ ' ' }
+					{ new Date( first.created_at ).toLocaleDateString( undefined, { month: 'long', day: 'numeric', year: 'numeric' } ) }
+					{ ' — ' }
+					{ new Date( last.created_at ).toLocaleDateString( undefined, { month: 'long', day: 'numeric', year: 'numeric' } ) }
+					{ ' · ' }{ scans.length } { __( 'scans', 'trailproof' ) }
+				</div>
+			) }
+
+			<div style={ { marginTop: 16, fontSize: 11, color: '#94A3B8', lineHeight: 1.5 } }>
+				{ __( 'This report reflects documented remediation progress generated by TrailProof. It is not a certification of full WCAG conformance.', 'trailproof' ) }
+			</div>
+		</div>
+	);
+}
+
 // ─── Evidence bundles table ───────────────────────────────────────────────────
 
 function BundleTable( { reports, generating, onGenerate } ) {
@@ -313,22 +443,27 @@ function BundleTable( { reports, generating, onGenerate } ) {
 // ─── Main Reports page ────────────────────────────────────────────────────────
 
 export default function Reports() {
-	const [ reports, setReports ]   = useState( [] );
-	const [ scans, setScans ]       = useState( [] );
-	const [ loading, setLoading ]   = useState( true );
-	const [ generating, setGen ]    = useState( false );
-	const [ error, setError ]       = useState( null );
-	const [ success, setSuccess ]   = useState( null );
+	const [ reports,    setReports ]    = useState( [] );
+	const [ scans,      setScans ]      = useState( [] );
+	const [ dashboard,  setDashboard ]  = useState( null );
+	const [ comparison, setComparison ] = useState( null );
+	const [ loading,    setLoading ]    = useState( true );
+	const [ generating, setGen ]        = useState( false );
+	const [ error,      setError ]      = useState( null );
+	const [ success,    setSuccess ]    = useState( null );
 
 	const fetchData = useCallback( () => {
 		setLoading( true );
 		Promise.all( [
 			apiFetch( { path: '/trailproof/v1/reports' } ).catch( () => [] ),
 			apiFetch( { path: '/trailproof/v1/scans?per_page=20' } ).catch( () => [] ),
-		] ).then( ( [ r, s ] ) => {
+			apiFetch( { path: '/trailproof/v1/dashboard' } ).catch( () => null ),
+			apiFetch( { path: '/trailproof/v1/comparison' } ).catch( () => null ),
+		] ).then( ( [ r, s, d, c ] ) => {
 			setReports( r );
-			// Scans ordered oldest-first for history display
 			setScans( [ ...( s ?? [] ) ].sort( ( a, b ) => new Date( a.created_at ) - new Date( b.created_at ) ) );
+			setDashboard( d );
+			setComparison( c );
 		} ).finally( () => setLoading( false ) );
 	}, [] );
 
@@ -363,6 +498,9 @@ export default function Reports() {
 				</div>
 			) : (
 				<div style={ { display: 'flex', flexDirection: 'column', gap: 24 } }>
+
+					{/* Accessibility impact report */}
+					<ImpactReportCard scans={ scans } dashboard={ dashboard } comparison={ comparison } />
 
 					{/* Before / after improvement summary */}
 					<ImprovementCard scans={ scans } />

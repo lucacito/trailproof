@@ -4,15 +4,22 @@ declare(strict_types=1);
 
 namespace Trailproof\Api;
 
+use Trailproof\Admin\SettingsPage;
 use Trailproof\Api\Routes\ChecklistRoutes;
 use Trailproof\Api\Routes\ClientPortalRoutes;
+use Trailproof\Api\Routes\ComparisonRoutes;
+use Trailproof\Api\Routes\ContrastRoutes;
 use Trailproof\Api\Routes\CorrectionRoutes;
+use Trailproof\Api\Routes\DiviRoutes;
+use Trailproof\Integrations\Divi\DiviAnalysisService;
+use Trailproof\Integrations\Divi\DiviDetector;
 use Trailproof\Api\Routes\DashboardRoutes;
 use Trailproof\Api\Routes\DecisionRoutes;
 use Trailproof\Api\Routes\IssueRoutes;
 use Trailproof\Api\Routes\PageRoutes;
 use Trailproof\Api\Routes\ReportRoutes;
 use Trailproof\Api\Routes\ScanRoutes;
+use Trailproof\Api\Routes\SettingsRoutes;
 use Trailproof\Api\Routes\SuggestionRoutes;
 use Trailproof\Repository\ClientTokenRepository;
 use Trailproof\Repository\CorrectionRepository;
@@ -63,6 +70,10 @@ class RestApi {
 		( new ReportRoutes( $issue_repo, $scan_repo, $log_repo ) )->register( self::REST_NAMESPACE );
 		( new SuggestionRoutes( $issue_repo, $log_repo ) )->register( self::REST_NAMESPACE );
 		( new ClientPortalRoutes( $token_repo, $issue_repo, $scan_repo, $log_repo ) )->register( self::REST_NAMESPACE );
+		( new SettingsRoutes( new SettingsPage() ) )->register( self::REST_NAMESPACE );
+		( new ComparisonRoutes() )->register( self::REST_NAMESPACE );
+		( new ContrastRoutes( $issue_repo ) )->register( self::REST_NAMESPACE );
+		( new DiviRoutes( new DiviAnalysisService( new DiviDetector() ) ) )->register( self::REST_NAMESPACE );
 	}
 
 	public function get_status( \WP_REST_Request $request ): \WP_REST_Response {

@@ -42,6 +42,12 @@ class CorrectionEngine {
 			return;
 		}
 
+		// Global kill-switch: when fixes_enabled is false all corrections are bypassed.
+		$settings = (array) get_option( 'trailproof_settings', [] );
+		if ( ! ( $settings['fixes_enabled'] ?? true ) ) {
+			return;
+		}
+
 		global $post;
 		$post_id = is_a( $post, 'WP_Post' ) ? (int) $post->ID : 0;
 

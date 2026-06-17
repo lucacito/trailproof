@@ -213,6 +213,10 @@ class SettingsPage {
 		$clean['notification_email']   = sanitize_email( $input['notification_email'] ?? '' );
 		$clean['notify_on_regression'] = ! empty( $input['notify_on_regression'] );
 
+		// fixes_enabled is toggled exclusively via REST API; preserve the stored value on HTML form saves.
+		$existing_for_fixes         = (array) get_option( self::OPTION_KEY, [] );
+		$clean['fixes_enabled']     = $existing_for_fixes['fixes_enabled'] ?? true;
+
 		return $clean;
 	}
 
@@ -231,6 +235,7 @@ class SettingsPage {
 			'claude_api_key'       => '',
 			'notification_email'   => '',
 			'notify_on_regression' => true,
+			'fixes_enabled'        => true,
 		];
 	}
 }

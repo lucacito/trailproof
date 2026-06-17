@@ -117,6 +117,72 @@ function PortalPreviewCard( { siteStatus } ) {
 	);
 }
 
+// ─── Client presentation card ─────────────────────────────────────────────────
+
+function ClientPresentationCard( { siteStatus } ) {
+	const score     = siteStatus?.health_score?.score ?? null;
+	const addressed = siteStatus?.unique_addressed ?? 0;
+	const open      = siteStatus?.unique_open      ?? 0;
+	const scanDate  = siteStatus?.last_scan_at
+		? new Date( siteStatus.last_scan_at ).toLocaleDateString( undefined, { month: 'long', year: 'numeric' } )
+		: null;
+
+	return (
+		<div style={ { ...card, padding: '24px 28px', borderLeft: '4px solid #2563EB' } }>
+			<div style={ { fontSize: 11, fontWeight: 700, color: '#2563EB', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 4 } }>
+				{ __( 'Client Presentation', 'trailproof' ) }
+			</div>
+			<h3 style={ { margin: '0 0 4px', fontSize: 16, fontWeight: 700, color: '#1A2742' } }>
+				{ __( 'Website Accessibility Progress', 'trailproof' ) }
+			</h3>
+			<p style={ { fontSize: 12, color: '#64748B', margin: '0 0 20px', lineHeight: 1.5 } }>
+				{ __( 'Share this view with clients via a portal link. They see progress — not technical problems.', 'trailproof' ) }
+			</p>
+
+			{/* Client-friendly summary */}
+			<div style={ { background: '#F8FAFC', border: '1px solid #E2E8F0', borderRadius: 10, padding: '20px 24px', maxWidth: 460 } }>
+				<div style={ { fontSize: 13, fontWeight: 700, color: '#1A2742', marginBottom: 16 } }>
+					Trailproof Review
+				</div>
+
+				<div style={ { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 16 } }>
+					<div style={ { textAlign: 'center', background: '#fff', borderRadius: 8, padding: '16px', border: '1px solid #E2E8F0' } }>
+						<div style={ { fontSize: 36, fontWeight: 800, color: '#15803D', lineHeight: 1 } }>
+							{ addressed }
+						</div>
+						<div style={ { fontSize: 12, color: '#64748B', marginTop: 4 } }>
+							{ __( 'Accessibility improvements completed', 'trailproof' ) }
+						</div>
+					</div>
+					<div style={ { textAlign: 'center', background: '#fff', borderRadius: 8, padding: '16px', border: '1px solid #E2E8F0' } }>
+						<div style={ { fontSize: 36, fontWeight: 800, color: '#D97706', lineHeight: 1 } }>
+							{ open }
+						</div>
+						<div style={ { fontSize: 12, color: '#64748B', marginTop: 4 } }>
+							{ __( 'Remaining items', 'trailproof' ) }
+						</div>
+					</div>
+				</div>
+
+				{ scanDate && (
+					<div style={ { fontSize: 12, color: '#94A3B8', display: 'flex', justifyContent: 'space-between', alignItems: 'center' } }>
+						<span>{ __( 'Last review:', 'trailproof' ) } { scanDate }</span>
+						{ score !== null && (
+							<span style={ { fontWeight: 600, color: '#1A2742' } }>
+								{ __( 'Score:', 'trailproof' ) } { score }/100
+							</span>
+						) }
+					</div>
+				) }
+
+				<div style={ { marginTop: 14, paddingTop: 12, borderTop: '1px solid #E2E8F0', fontSize: 11, color: '#94A3B8', lineHeight: 1.5 } }>
+					{ __( 'Accessibility improvements are being systematically documented and applied by Trailproof.', 'trailproof' ) }
+				</div>
+			</div>
+		</div>
+	);
+}
+
 // ─── Token row ────────────────────────────────────────────────────────────────
 
 function TokenRow( { token, onCopy, onRevoke, copied } ) {
@@ -347,6 +413,9 @@ export default function ClientPortal() {
 			) }
 
 			<div style={ { display: 'flex', flexDirection: 'column', gap: 24 } }>
+
+				{/* Client presentation summary */}
+				{ ! loading && <ClientPresentationCard siteStatus={ siteStatus } /> }
 
 				{/* Portal preview */}
 				{ ! loading && <PortalPreviewCard siteStatus={ siteStatus } /> }

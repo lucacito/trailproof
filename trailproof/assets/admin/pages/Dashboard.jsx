@@ -535,6 +535,90 @@ function InlineChecklist( { navigate } ) {
 	);
 }
 
+// ─── Accessibility areas card ─────────────────────────────────────────────────
+
+const AREA_MAP = {
+	'Structure':    [ 'document-title', 'html-has-lang', 'page-has-heading-one', 'valid-lang', 'heading-order' ],
+	'Navigation':   [ 'bypass', 'landmark-one-main', 'landmark-main-is-top-level', 'focus-order-semantics', 'skip-link' ],
+	'Color Contrast': [ 'color-contrast', 'color-contrast-enhanced' ],
+	'Images':       [ 'image-alt', 'image-redundant-alt', 'background-img-redundant', 'role-img-alt' ],
+	'Forms':        [ 'label', 'label-content-name-mismatch', 'form-field-multiple-labels', 'select-name', 'input-image-alt' ],
+};
+
+const AREA_ICONS = {
+	'Structure':      '🏗️',
+	'Navigation':     '🧭',
+	'Color Contrast': '🎨',
+	'Images':         '🖼️',
+	'Forms':          '📋',
+};
+
+function AccessibilityAreas( { groups, navigate } ) {
+	if ( ! groups ) return null;
+
+	const openRules = new Set( ( groups ?? [] ).map( g => g.rule_id ) );
+
+	const areas = Object.entries( AREA_MAP ).map( ( [ area, rules ] ) => {
+		const hasIssues = rules.some( r => openRules.has( r ) );
+		return { area, hasIssues };
+	} );
+
+	const goodCount = areas.filter( a => ! a.hasIssues ).length;
+	const needsCount = areas.filter( a => a.hasIssues ).length;
+
+	return (
+		<div style={ { ...card, padding: '20px 24px', marginBottom: 20 } }>
+			<div style={ { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 } }>
+				<div style={ { fontSize: 12, fontWeight: 700, color: '#1A2742', textTransform: 'uppercase', letterSpacing: '0.06em' } }>
+					{ __( 'Accessibility Areas', 'trailproof' ) }
+				</div>
+				<div style={ { display: 'flex', gap: 6 } }>
+					{ goodCount > 0 && (
+						<span style={ { fontSize: 11, background: '#F0FDF4', color: '#15803D', borderRadius: 99, padding: '2px 8px', fontWeight: 600 } }>
+							{ goodCount } { __( 'good', 'trailproof' ) }
+						</span>
+					) }
+					{ needsCount > 0 && (
+						<span style={ { fontSize: 11, background: '#FFF7ED', color: '#C2410C', borderRadius: 99, padding: '2px 8px', fontWeight: 600 } }>
+							{ needsCount } { __( 'needs review', 'trailproof' ) }
+						</span>
+					) }
+				</div>
+			</div>
+			<div style={ { display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 10 } }>
+				{ areas.map( ( { area, hasIssues } ) => (
+					<button
+						key={ area }
+						onClick={ () => navigate( area === 'Color Contrast' ? 'contrast' : 'worklist' ) }
+						style={ {
+							display:       'flex',
+							flexDirection: 'column',
+							alignItems:    'center',
+							gap:           6,
+							padding:       '14px 10px',
+							background:    hasIssues ? '#FFF7ED' : '#F0FDF4',
+							border:        `1px solid ${ hasIssues ? '#FED7AA' : '#BBF7D0' }`,
+							borderRadius:  8,
+							cursor:        'pointer',
+							textAlign:     'center',
+						} }
+					>
+						<span style={ { fontSize: 22 } } aria-hidden="true">{ AREA_ICONS[ area ] }</span>
+						<div style={ { fontSize: 11, fontWeight: 600, color: '#1A2742', lineHeight: 1.3 } }>{ area }</div>
+						<div style={ {
+							fontSize:     10,
+							fontWeight:   700,
+							color:        hasIssues ? '#C2410C' : '#15803D',
+						} }>
+							{ hasIssues ? __( '⚠ Needs attention', 'trailproof' ) : __( '✓ Good', 'trailproof' ) }
+						</div>
+					</button>
+				) ) }
+			</div>
+		</div>
+	);
+}
+
 // ─── Main dashboard ───────────────────────────────────────────────────────────
 
 export default function Dashboard( { navigate, siteStatus, refreshStatus } ) {
@@ -628,8 +712,11 @@ export default function Dashboard( { navigate, siteStatus, refreshStatus } ) {
 						<InlineChecklist navigate={ navigate } />
 					</div>
 
+					{/* Accessibility areas */}
+					<AccessibilityAreas groups={ top_grouped } navigate={ navigate } />
+
 					{/* Bottom row: recent changes + premium */}
-					<div style={ { display: 'grid', gridTemplateColumns: '1fr 260px', gap: 20, marginTop: 20, alignItems: 'start' } }>
+					<div style={ { display: 'grid', gridTemplateColumns: '1fr 260px', gap: 20, alignItems: 'start' } }>
 						<div style={ { ...card, padding: '14px 16px' } }>
 							<div style={ { fontSize: 12, fontWeight: 600, color: '#1A2742', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 12 } }>
 								{ __( 'Recent changes', 'trailproof' ) }

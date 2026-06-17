@@ -371,9 +371,10 @@ export default function Worklist( { navigate } ) {
 		let totalFixed = 0;
 		try {
 			for ( const group of fixableGroups ) {
-				const instances = await apiFetch( {
-					path: `/trailproof/v1/issues?rule_id=${ encodeURIComponent( group.rule_id ) }&status=open&per_page=200`,
+				const all = await apiFetch( {
+					path: `/trailproof/v1/issues?rule_id=${ encodeURIComponent( group.rule_id ) }&per_page=200`,
 				} );
+				const instances = all.filter( i => [ 'open', 'regressed' ].includes( i.status ) );
 				for ( const issue of instances ) {
 					await apiFetch( {
 						path:   `/trailproof/v1/issues/${ issue.id }/decide`,
@@ -416,9 +417,10 @@ export default function Worklist( { navigate } ) {
 		setError( null );
 		setSuccess( null );
 		try {
-			const instances = await apiFetch( {
-				path: `/trailproof/v1/issues?rule_id=${ encodeURIComponent( group.rule_id ) }&status=open&per_page=200`,
+			const all = await apiFetch( {
+				path: `/trailproof/v1/issues?rule_id=${ encodeURIComponent( group.rule_id ) }&per_page=200`,
 			} );
+			const instances = all.filter( i => [ 'open', 'regressed' ].includes( i.status ) );
 			for ( const issue of instances ) {
 				await apiFetch( {
 					path:   `/trailproof/v1/issues/${ issue.id }/decide`,
