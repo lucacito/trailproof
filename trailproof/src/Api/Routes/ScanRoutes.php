@@ -240,10 +240,15 @@ class ScanRoutes {
 		// Auto-resolve: if axe-core passes a rule for this page, mark any stored open
 		// issues for that rule+page as fixed. This clears stale issues (e.g. page-has-heading-one
 		// when an h1 now exists) without requiring a manual status change.
+		// Per-element rules: a "pass" on one element doesn't mean other elements on the same
+		// page passed too. Calling mark_passed for these would wipe out real violations that
+		// axe reported simultaneously (color-contrast appears in both passes and violations).
+		$per_element_rules = [ 'color-contrast', 'color-contrast-enhanced' ];
+
 		$passes = is_array( $results['passes'] ?? null ) ? $results['passes'] : [];
 		foreach ( $passes as $pass ) {
 			$pass_rule = sanitize_key( $pass['id'] ?? '' );
-			if ( $pass_rule ) {
+			if ( $pass_rule && ! in_array( $pass_rule, $per_element_rules, true ) ) {
 				$this->issue_repo->mark_passed( $pass_rule, $post_id, $url );
 			}
 		}

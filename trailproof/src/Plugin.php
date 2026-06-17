@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Trailproof;
 
+use Trailproof\Admin\AdminBarToggle;
 use Trailproof\Admin\AdminMenu;
 use Trailproof\Admin\SettingsPage;
 use Trailproof\Api\RestApi;
@@ -28,6 +29,7 @@ class Plugin {
 		$settings_page             = new SettingsPage();
 		$admin_menu                = new AdminMenu( $settings_page );
 		$rest_api                  = new RestApi();
+		$admin_bar_toggle          = new AdminBarToggle();
 		$scheduler                 = new StaticScanScheduler();
 		$correction_engine         = new CorrectionEngine( new CorrectionRepository() );
 		$sitewide_enhancements     = new SitewideEnhancementsEngine();
@@ -38,6 +40,9 @@ class Plugin {
 		$scheduler->register();
 
 		add_action( 'trailproof_scan_complete', [ $notification_service, 'on_scan_complete' ] );
+
+		// Admin bar quick toggle (manage_options only)
+		$admin_bar_toggle->register();
 
 		// Render-time correction layer (non-destructive, output buffering)
 		$correction_engine->register();
