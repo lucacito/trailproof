@@ -128,6 +128,17 @@ class DecisionRoutes {
 
 		$this->issue_repo->set_status( (int) $issue['id'], 'fixed' );
 
+		// set_text_color is a global CSS rule (post_id = null) that fixes the same element on
+		// every page. Mark all color-contrast issues sharing this selector as fixed so the
+		// grouped worklist correctly shows zero open instances across the board.
+		if ( 'set_text_color' === $transform_type && ! empty( $issue['selector'] ) ) {
+			$this->issue_repo->set_status_by_selector_and_rules(
+				$issue['selector'],
+				[ 'color-contrast', 'color-contrast-enhanced' ],
+				'fixed'
+			);
+		}
+
 		$this->log_repo->log(
 			'decision_apply',
 			$fingerprint,

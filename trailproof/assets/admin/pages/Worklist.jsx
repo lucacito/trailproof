@@ -494,10 +494,12 @@ export default function Worklist( { navigate } ) {
 
 	function handleDecisionSaved( updatedIssue ) {
 		const wasOpen = [ 'open', 'regressed' ].includes( decisionIssue?.status );
-		if ( wasOpen ) {
+		// Color-contrast fixes inject a global CSS rule that resolves every instance sharing
+		// the same selector. Re-fetch so all duplicate rows disappear from the open list.
+		const isGlobalFix = [ 'color-contrast', 'color-contrast-enhanced' ].includes( updatedIssue.rule_id );
+		if ( wasOpen && ! isGlobalFix ) {
 			markIssueFixed( updatedIssue.id, updatedIssue.rule_id );
 		} else {
-			// Revision of an already-decided issue — refresh from server to get accurate counts
 			fetchGroups();
 		}
 		setDecisionIssue( null );

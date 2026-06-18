@@ -85,6 +85,9 @@ function Swatch( { fg, bg, label, ratio, passes, text } ) {
 function PageGroup( { url, post_title, issues, onFixApplied } ) {
 	const [ open, setOpen ] = useState( true );
 	const failCount = issues.filter( i => i.status !== 'fixed' && i.status !== 'na' ).length;
+	const isHeader  = post_title === 'Site Header';
+	const isFooter  = post_title === 'Site Footer';
+	const icon      = isHeader ? '▲' : isFooter ? '▼' : '📄';
 
 	return (
 		<div style={ { border: '1px solid #E8ECF2', borderRadius: 8, overflow: 'hidden' } }>
@@ -104,7 +107,7 @@ function PageGroup( { url, post_title, issues, onFixApplied } ) {
 				} }
 			>
 				<div style={ { display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 } }>
-					<span style={ { fontSize: 12, color: '#94A3B8' } } aria-hidden="true">📄</span>
+					<span style={ { fontSize: 12, color: '#94A3B8' } } aria-hidden="true">{ icon }</span>
 					<span style={ { fontSize: 13, fontWeight: 600, color: '#1A2742', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' } }>
 						{ post_title || url }
 					</span>
@@ -557,11 +560,18 @@ function groupByPage( items ) {
 	for ( const issue of items ) {
 		const key = issue.url;
 		if ( ! map.has( key ) ) {
-			map.set( key, { url: issue.url, post_title: issue.post_title, issues: [] } );
+			map.set( key, { url: issue.url, post_title: issue.post_title, issues: [], isHeader: issue.post_title === 'Site Header', isFooter: issue.post_title === 'Site Footer' } );
 		}
 		map.get( key ).issues.push( issue );
 	}
-	return [ ...map.values() ];
+	// Pin header first, footer second, then remaining pages.
+	return [ ...map.values() ].sort( ( a, b ) => {
+		if ( a.isHeader ) return -1;
+		if ( b.isHeader ) return 1;
+		if ( a.isFooter ) return -1;
+		if ( b.isFooter ) return 1;
+		return 0;
+	} );
 }
 
 export default function ContrastAnalyzer() {

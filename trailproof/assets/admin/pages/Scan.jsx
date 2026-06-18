@@ -7,15 +7,33 @@ import FocusOrderOverlay from '../components/FocusOrderOverlay';
 
 const SCAN_TIMEOUT_MS = 40_000; // 40 s per page
 
+// Common header/footer selectors across themes (Divi, Genesis, default WP themes, etc.)
+const HEADER_SELECTORS = [
+	'header', '#masthead', '#main-header', '.site-header',
+	'#et-top-navigation', '.et-l--header',
+];
+const FOOTER_SELECTORS = [
+	'footer', '#colophon', '#main-footer', '#et-pb-footer-area',
+	'.et-l--footer', '#et-footer-nav', '.site-footer',
+];
+
+const HEADER_AXE_CONTEXT = { include: HEADER_SELECTORS.map( s => [ s ] ) };
+const FOOTER_AXE_CONTEXT = { include: FOOTER_SELECTORS.map( s => [ s ] ) };
+const PAGE_AXE_CONTEXT   = {
+	exclude: [ ...HEADER_SELECTORS.map( s => [ s ] ), ...FOOTER_SELECTORS.map( s => [ s ] ) ],
+};
+
 /**
  * Injects axe-core into a same-origin iframe and runs it.
  * Returns the raw axe results object.
+ *
+ * axeContext — optional axe context (include/exclude object). Null = full page.
  *
  * We inject a <style> that forces every element to its visible end-state so that
  * Divi entrance animations (which start at opacity:0 and transition via IntersectionObserver)
  * don't hide content from axe before the analysis runs.
  */
-function runAxeInIframe( iframe, axeUrl ) {
+function runAxeInIframe( iframe, axeUrl, axeContext = null ) {
 	return new Promise( ( resolve, reject ) => {
 		const timer = setTimeout( () => reject( new Error( 'Scan timed out' ) ), SCAN_TIMEOUT_MS );
 
@@ -46,7 +64,9 @@ function runAxeInIframe( iframe, axeUrl ) {
 				console.log( '[Trailproof] h1 count:', h1s.length );
 				console.log( '[Trailproof] iframe body snippet:', iframe.contentDocument.body?.innerHTML?.trim().slice( 0, 300 ) );
 
-				const results = await iframe.contentWindow.axe.run();
+				const results = axeContext
+					? await iframe.contentWindow.axe.run( axeContext )
+					: await iframe.contentWindow.axe.run();
 				clearTimeout( timer );
 				resolve( results );
 			} catch ( err ) {
@@ -134,14 +154,46 @@ export default function Scan( { navigate } ) {
 			return;
 		}
 
-		setPages( pageList );
+		// Build the full scan queue:
+		//   1. Site Header — scans only the header region of the home page
+		//   2. Site Footer — scans only the footer region of the home page
+		//   3. Each content page — scans the full page excluding header and footer
+		const siteUrl = ( window.trailproofData?.siteUrl ?? window.location.origin + '/' )
+			.replace( /\/$/, '' );
+
+		const scanQueue = [
+			{
+				url:        siteUrl + '/?trailproof_zone=header',
+				iframeUrl:  siteUrl + '/',
+				post_id:    0,
+				title:      __( 'Site Header', 'trailproof' ),
+				axeContext: HEADER_AXE_CONTEXT,
+				isSpecial:  true,
+			},
+			{
+				url:        siteUrl + '/?trailproof_zone=footer',
+				iframeUrl:  siteUrl + '/',
+				post_id:    0,
+				title:      __( 'Site Footer', 'trailproof' ),
+				axeContext: FOOTER_AXE_CONTEXT,
+				isSpecial:  true,
+			},
+			...pageList.map( p => ( {
+				...p,
+				iframeUrl:  p.url,
+				axeContext: PAGE_AXE_CONTEXT,
+				isSpecial:  false,
+			} ) ),
+		];
+
+		setPages( scanQueue );
 		const errs = [];
 
-		for ( let i = 0; i < pageList.length; i++ ) {
+		for ( let i = 0; i < scanQueue.length; i++ ) {
 			if ( abortRef.current ) break;
 			setIndex( i );
 
-			const { url, post_id, title } = pageList[ i ];
+			const { url, iframeUrl, post_id, title, axeContext, isSpecial } = scanQueue[ i ];
 
 			// axe-core scan (client-side iframe)
 			let iframe = null;
@@ -154,18 +206,18 @@ export default function Scan( { navigate } ) {
 
 				// Diagnostic: check response headers before loading in iframe
 				try {
-					const r = await fetch( url, { credentials: 'include' } );
+					const r = await fetch( iframeUrl, { credentials: 'include' } );
 					console.log( '[Trailproof] X-Frame-Options:', r.headers.get( 'X-Frame-Options' ) );
 					console.log( '[Trailproof] CSP:', r.headers.get( 'Content-Security-Policy' ) );
 				} catch ( e ) { /* ignore */ }
 
-				iframe = await loadIframe( url );
-				const results = await runAxeInIframe( iframe, axeUrl );
+				iframe = await loadIframe( iframeUrl );
+				const results = await runAxeInIframe( iframe, axeUrl, axeContext );
 				document.body.removeChild( iframe );
 				iframe = null;
 
 				// Diagnostic — open browser DevTools console to see these
-				console.log( '[Trailproof] scanned:', url );
+				console.log( '[Trailproof] scanned:', url, '(iframe:', iframeUrl, ')' );
 				console.log( '[Trailproof] violations (' + ( results.violations?.length ?? 0 ) + '):', results.violations?.map( v => v.id ) );
 				console.log( '[Trailproof] passes (' + ( results.passes?.length ?? 0 ) + '):', results.passes?.map( v => v.id ) );
 				console.log( '[Trailproof] incomplete (' + ( results.incomplete?.length ?? 0 ) + '):', results.incomplete?.map( v => v.id ) );
@@ -181,6 +233,11 @@ export default function Scan( { navigate } ) {
 				if ( iframe && iframe.parentNode ) {
 					iframe.parentNode.removeChild( iframe );
 				}
+			}
+
+			// Header/footer virtual scans skip Gutenberg/Elementor (they have no post content)
+			if ( isSpecial ) {
+				continue;
 			}
 
 			// Gutenberg scan (server-side DOMDocument — always included)
@@ -211,7 +268,7 @@ export default function Scan( { navigate } ) {
 		}
 
 		setErrors( errs );
-		setIndex( pageList.length );
+		setIndex( scanQueue.length );
 		setDone( true );
 		setScanning( false );
 	}
@@ -315,7 +372,7 @@ export default function Scan( { navigate } ) {
 							style={ { height: 32, borderRadius: 4, border: '1px solid #8c8f94', padding: '0 8px' } }
 						>
 							<option value="">{ __( '— select a page —', 'trailproof' ) }</option>
-							{ pages.map( ( p ) => (
+							{ pages.filter( p => ! p.isSpecial ).map( ( p ) => (
 								<option key={ p.url } value={ p.url }>{ p.title || p.url }</option>
 							) ) }
 						</select>

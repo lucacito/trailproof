@@ -66,9 +66,7 @@ class ContrastRoutes {
 			$color_data = $this->extract_color_data( $node );
 
 			$post_id    = (int) $row['post_id'];
-			$post_title = $post_id > 0
-				? get_the_title( $post_id )
-				: get_bloginfo( 'name' );
+			$post_title = $this->resolve_post_title( $post_id, $row['url'] ?? '' );
 
 			$items[] = [
 				'id'           => (int) $row['id'],
@@ -103,6 +101,23 @@ class ContrastRoutes {
 			'total'  => count( $items ),
 			'passed' => $passed,
 		], 200 );
+	}
+
+	private function resolve_post_title( int $post_id, string $url ): string {
+		if ( $url !== '' ) {
+			$qs = wp_parse_url( $url, PHP_URL_QUERY ) ?? '';
+			if ( $qs ) {
+				parse_str( $qs, $qp );
+				$zone = $qp['trailproof_zone'] ?? '';
+				if ( $zone === 'header' ) {
+					return __( 'Site Header', 'trailproof' );
+				}
+				if ( $zone === 'footer' ) {
+					return __( 'Site Footer', 'trailproof' );
+				}
+			}
+		}
+		return $post_id > 0 ? (string) get_the_title( $post_id ) : (string) get_bloginfo( 'name' );
 	}
 
 	/**

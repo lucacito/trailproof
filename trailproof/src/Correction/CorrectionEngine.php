@@ -145,6 +145,32 @@ class CorrectionEngine {
 		}
 
 		$result = $dom->saveHTML();
-		return $result !== false ? $result : $html;
+		if ( $result === false ) {
+			return $html;
+		}
+
+		// PHP's DOMDocument::saveHTML() HTML-escapes text node content even inside <style>
+		// and <script> raw-text elements (e.g. CSS child combinator > becomes &gt;).
+		// This corrupts Divi's inline CSS blocks and any CSS we inject via SetTextColorTransform.
+		// Reverse the escaping for these elements — entities are never valid inside CSS or JS.
+		$result = preg_replace_callback(
+			'/(<style\b[^>]*>)(.*?)(<\/style>)/si',
+			static function ( $m ) {
+				return $m[1] . html_entity_decode( $m[2], ENT_HTML5 | ENT_QUOTES, 'UTF-8' ) . $m[3];
+			},
+			$result
+		) ?? $result;
+
+		$result = preg_replace_callback(
+			'/(<script\b[^>]*>)(.*?)(<\/script>)/si',
+			static function ( $m ) {
+				// Only reverse < and > — leave &amp; alone to avoid corrupting intentional
+				// HTML entity literals inside JavaScript string values.
+				return $m[1] . str_replace( [ '&lt;', '&gt;' ], [ '<', '>' ], $m[2] ) . $m[3];
+			},
+			$result
+		) ?? $result;
+
+		return $result;
 	}
 }

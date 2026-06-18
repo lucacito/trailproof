@@ -191,6 +191,23 @@ class IssueRepository {
 	}
 
 	private function enrich_page_title( array $row ): array {
+		// Header/footer scope: synthetic URLs written by the client-side scan.
+		if ( ! empty( $row['url'] ) ) {
+			$qs = wp_parse_url( $row['url'], PHP_URL_QUERY ) ?? '';
+			if ( $qs ) {
+				parse_str( $qs, $qp );
+				$zone = $qp['trailproof_zone'] ?? '';
+				if ( $zone === 'header' ) {
+					$row['page_title'] = __( 'Site Header', 'trailproof' );
+					return $row;
+				}
+				if ( $zone === 'footer' ) {
+					$row['page_title'] = __( 'Site Footer', 'trailproof' );
+					return $row;
+				}
+			}
+		}
+
 		$post_id = (int) ( $row['post_id'] ?? 0 );
 
 		// If post_id wasn't stored (common when scanned via "ugly" permalinks like /?page_id=11),

@@ -36,7 +36,16 @@ class Fingerprint {
 	private static function normalize_url( string $url ): string {
 		$parsed = wp_parse_url( $url );
 		$path   = $parsed['path'] ?? '/';
-		// Strip trailing slash for consistency, but keep root
-		return rtrim( $path, '/' ) ?: '/';
+		$base   = rtrim( $path, '/' ) ?: '/';
+
+		// Preserve trailproof_zone so header/footer scans get distinct fingerprints.
+		if ( ! empty( $parsed['query'] ) ) {
+			parse_str( $parsed['query'], $params );
+			if ( isset( $params['trailproof_zone'] ) ) {
+				return $base . '/~' . sanitize_key( $params['trailproof_zone'] );
+			}
+		}
+
+		return $base;
 	}
 }
