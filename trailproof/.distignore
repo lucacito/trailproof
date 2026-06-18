@@ -1,9 +1,12 @@
 .git
 .gitignore
+.distignore
 .phpunit.result.cache
 CLAUDE.md
 README.md
 phpunit.xml.dist
+composer.json
+composer.lock
 package.json
 package-lock.json
 node_modules

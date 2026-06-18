@@ -47,7 +47,7 @@ class SitewideEnhancementsEngine {
 				"body:not(.trailproof-preview-off) input[type=\"button\"],\n" .
 				"body:not(.trailproof-preview-off) input[type=\"reset\"],\n" .
 				"body:not(.trailproof-preview-off) summary { min-height: 44px; min-width: 44px; }\n" .
-				"body:not(.trailproof-preview-off) a[href]:not(.tp-skip-link) { min-height: 44px; display: inline-flex; align-items: center; }\n" .
+				"body:not(.trailproof-preview-off) a[href]:not(.tp-skip-link):not(:has(img)) { min-height: 44px; display: inline-flex; align-items: center; }\n" .
 				"#wpadminbar a, #wpadminbar button, #wpadminbar [role=\"button\"] { min-height: 0; min-width: 0; display: revert; }";
 		}
 
