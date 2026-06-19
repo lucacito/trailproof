@@ -66,7 +66,7 @@ class SitewideEnhancementsEngine {
 		}
 
 		$font_size = (int) ( $settings['base_font_size'] ?? 0 );
-		if ( $font_size > 0 ) {
+		if ( in_array( $font_size, [ 16, 18, 20, 22 ], true ) ) {
 			// font-size on html affects rem units sitewide; body:not() scoping isn't usable here
 			$blocks[] = "html { font-size: {$font_size}px !important; }";
 		}

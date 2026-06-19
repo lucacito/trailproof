@@ -53,16 +53,13 @@ class Plugin {
 		// Divi 5 editor prevention — author-side nudges in the Visual Builder
 		$divi_prevention->register();
 
+		// Re-sync cron whenever settings are saved — must run on all request types (REST, admin, cron).
+		add_action( 'update_option_trailproof_settings', [ $scheduler, 'sync_schedule' ] );
+
 		if ( is_admin() ) {
 			add_action( 'admin_menu', [ $admin_menu, 'register_menus' ] );
 			add_action( 'admin_enqueue_scripts', [ $admin_menu, 'enqueue_assets' ] );
 			add_action( 'admin_init', [ $settings_page, 'register_settings' ] );
-
-			// Re-sync the cron schedule whenever settings are saved
-			add_action(
-				'update_option_trailproof_settings',
-				[ $scheduler, 'sync_schedule' ]
-			);
 		}
 
 		add_action( 'rest_api_init', [ $rest_api, 'register_routes' ] );

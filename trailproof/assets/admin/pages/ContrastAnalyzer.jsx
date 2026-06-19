@@ -391,7 +391,7 @@ function ContrastIssueCard( { issue, inGroup = false, onFixApplied } ) {
 											opacity:      reverting ? 0.6 : 1,
 										} }
 									>
-										{ reverting ? __( 'Reverting…', 'trailproof' ) : __( 'Revert fix', 'trailproof' ) }
+										{ reverting ? __( 'Undoing…', 'trailproof' ) : __( 'Undo fix', 'trailproof' ) }
 									</button>
 								) }
 							</>
@@ -669,7 +669,7 @@ export default function ContrastAnalyzer() {
 									url={ group.url }
 									post_title={ group.post_title }
 									issues={ group.issues }
-									onFixApplied={ fetchData }
+									onFixApplied={ () => { setFilter( 'all' ); fetchData(); } }
 								/>
 							) ) }
 						</div>

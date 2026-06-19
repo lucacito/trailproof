@@ -205,7 +205,9 @@ class BundleExporter {
 		// Block direct HTTP access to this directory
 		$htaccess = $dir . '/.htaccess';
 		if ( ! file_exists( $htaccess ) ) {
-			file_put_contents( $htaccess, "deny from all\n" );
+			if ( false === file_put_contents( $htaccess, "deny from all\n" ) ) {
+				throw new \RuntimeException( 'Could not write .htaccess to the reports directory — check filesystem permissions. ZIP bundles would be publicly accessible without this file.' );
+			}
 		}
 
 		// Block directory listing even if .htaccess is ignored

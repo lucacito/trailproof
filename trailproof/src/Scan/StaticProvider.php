@@ -234,7 +234,7 @@ class StaticProvider implements ScanProvider {
 			// Explicit <label for="id">
 			$id = $node->getAttribute( 'id' );
 			if ( $id ) {
-				$label_nodes = $xpath->query( "//label[@for='" . addslashes( $id ) . "']" );
+				$label_nodes = $xpath->query( '//label[@for=' . $this->xpath_string( $id ) . ']' );
 				if ( $label_nodes && $label_nodes->length > 0 ) {
 					continue;
 				}
@@ -439,6 +439,21 @@ class StaticProvider implements ScanProvider {
 			'priority_score' => BucketClassifier::priority_score( $rule_id, $severity, $bucket ),
 			'description'   => $wcag['description'],
 		];
+	}
+
+	/**
+	 * Safely encode a string value for use inside an XPath 1.0 expression.
+	 * XPath 1.0 has no escape sequences, so values containing both ' and " need concat().
+	 */
+	private function xpath_string( string $value ): string {
+		if ( ! str_contains( $value, "'" ) ) {
+			return "'{$value}'";
+		}
+		if ( ! str_contains( $value, '"' ) ) {
+			return "\"{$value}\"";
+		}
+		$parts = explode( "'", $value );
+		return "concat('" . implode( "',\"'\",'", $parts ) . "')";
 	}
 
 	/**

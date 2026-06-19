@@ -59,7 +59,7 @@ class IssueRepository {
 		}
 
 		$node_data = $data['node_data_json'] ?? null;
-		$wpdb->insert(
+		$inserted  = $wpdb->insert(
 			$table,
 			[
 				'scan_id'           => (int) $data['scan_id'],
@@ -79,6 +79,16 @@ class IssueRepository {
 			],
 			[ '%d', '%s', '%s', '%d', '%s', '%s', '%s', '%s', '%s', '%d', '%s', '%s', '%s', '%s' ]
 		);
+
+		if ( false === $inserted ) {
+			// Race condition: another request inserted the same fingerprint between our SELECT and INSERT.
+			// Re-fetch to return the existing row's ID rather than 0.
+			$race_row = $wpdb->get_row(
+				$wpdb->prepare( "SELECT id FROM $table WHERE fingerprint = %s", $data['fingerprint'] ),
+				ARRAY_A
+			);
+			return $race_row ? (int) $race_row['id'] : 0;
+		}
 
 		return (int) $wpdb->insert_id;
 	}
@@ -281,7 +291,17 @@ class IssueRepository {
 			return;
 		}
 
-		$placeholders = implode( ',', array_fill( 0, count( $rule_ids ), '%s' ) );
+		// Sanitize rule IDs to alphanumeric+hyphen+underscore to prevent % from confusing wpdb->prepare().
+		$safe_rule_ids = array_values( array_filter(
+			array_map( 'sanitize_key', $rule_ids ),
+			fn( $id ) => $id !== ''
+		) );
+
+		if ( empty( $safe_rule_ids ) ) {
+			return;
+		}
+
+		$placeholders = implode( ',', array_fill( 0, count( $safe_rule_ids ), '%s' ) );
 
 		// phpcs:disable WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQLPlaceholders.UnfinishedPrepare
 		$wpdb->query(
@@ -289,7 +309,7 @@ class IssueRepository {
 				"UPDATE {$wpdb->prefix}tp_issues
 				 SET status = %s, updated_at = %s
 				 WHERE selector = %s AND rule_id IN ($placeholders)",
-				array_merge( [ $status, current_time( 'mysql' ), $selector ], $rule_ids )
+				array_merge( [ $status, current_time( 'mysql' ), $selector ], $safe_rule_ids )
 			)
 		);
 		// phpcs:enable

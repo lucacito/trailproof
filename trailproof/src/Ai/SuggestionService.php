@@ -63,24 +63,26 @@ class SuggestionService {
 	}
 
 	private function build_prompt( string $rule_id, array $node_data ): string {
-		$html = $node_data['html'] ?? '';
+		// Limit length and wrap in a code fence to reduce prompt-injection surface from page content.
+		$html         = mb_substr( $node_data['html'] ?? '', 0, 500 );
+		$element_block = "```html\n" . $html . "\n```";
 
 		return match ( true ) {
 			in_array( $rule_id, [ 'image-alt', 'input-image-alt', 'area-alt' ], true ) =>
 				"Write a concise, descriptive alt attribute (under 100 characters) for the following HTML image element. " .
-				"Return only the alt text itself — no quotes, no extra words.\n\nElement: " . $html,
+				"Return only the alt text itself — no quotes, no extra words.\n\nElement:\n" . $element_block,
 
 			in_array( $rule_id, [ 'link-name', 'button-name' ], true ) =>
 				"Write a clear, descriptive accessible name for the following HTML link or button. " .
-				"Return only the accessible name — no quotes, no extra words.\n\nElement: " . $html,
+				"Return only the accessible name — no quotes, no extra words.\n\nElement:\n" . $element_block,
 
 			$rule_id === 'label' =>
 				"Write a concise, human-readable form field label for the following HTML input. " .
-				"Return only the label text — no quotes, no extra words.\n\nElement: " . $html,
+				"Return only the label text — no quotes, no extra words.\n\nElement:\n" . $element_block,
 
 			default =>
 				"Write a concise, descriptive aria-label attribute value for the following HTML element. " .
-				"Return only the aria-label text — no quotes, no extra words.\n\nElement: " . $html,
+				"Return only the aria-label text — no quotes, no extra words.\n\nElement:\n" . $element_block,
 		};
 	}
 }

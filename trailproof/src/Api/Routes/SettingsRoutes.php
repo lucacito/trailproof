@@ -103,12 +103,29 @@ class SettingsRoutes {
 	public function reset_data( \WP_REST_Request $request ): \WP_REST_Response {
 		global $wpdb;
 
-		// Truncate scan data and corrections; leave tp_decisions_log (append-only audit trail).
+		// Collect report file paths before truncating so we can delete ZIPs from disk.
+		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+		$reports = (array) $wpdb->get_results(
+			"SELECT snapshot_json FROM {$wpdb->prefix}tp_reports",
+			ARRAY_A
+		);
+		// phpcs:enable
+
+		// Truncate scan data, corrections, and reports; leave tp_decisions_log (append-only audit trail).
 		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.DirectDatabaseQuery.SchemaChange
 		$wpdb->query( "TRUNCATE TABLE {$wpdb->prefix}tp_corrections" );
 		$wpdb->query( "TRUNCATE TABLE {$wpdb->prefix}tp_issues" );
 		$wpdb->query( "TRUNCATE TABLE {$wpdb->prefix}tp_scans" );
+		$wpdb->query( "TRUNCATE TABLE {$wpdb->prefix}tp_reports" );
 		// phpcs:enable
+
+		foreach ( $reports as $report ) {
+			$snapshot  = json_decode( $report['snapshot_json'] ?? '{}', true );
+			$file_path = $snapshot['file_path'] ?? '';
+			if ( $file_path && file_exists( $file_path ) ) {
+				wp_delete_file( $file_path );
+			}
+		}
 
 		return new \WP_REST_Response( [ 'reset' => true ], 200 );
 	}

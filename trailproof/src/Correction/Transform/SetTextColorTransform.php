@@ -25,6 +25,11 @@ class SetTextColorTransform implements TransformInterface {
 			return false;
 		}
 
+		// Reject selectors that contain CSS structural characters — they would break out of the rule block.
+		if ( preg_match( '/[{};]/', $selector ) ) {
+			return false;
+		}
+
 		$head_list = $dom->getElementsByTagName( 'head' );
 		if ( $head_list->length === 0 ) {
 			return false;

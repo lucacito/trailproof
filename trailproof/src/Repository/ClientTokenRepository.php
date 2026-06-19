@@ -22,16 +22,17 @@ class ClientTokenRepository {
 
 		$token = bin2hex( random_bytes( 32 ) );
 
-		$wpdb->insert(
-			$this->table(),
-			[
-				'token'      => $token,
-				'label'      => $label,
-				'expires_at' => $expires_at,
-				'created_by' => $user_id,
-			],
-			[ '%s', '%s', $expires_at !== null ? '%s' : null, '%d' ]
-		);
+		// Exclude expires_at entirely when null so the column uses its DB DEFAULT (NULL).
+		// Passing null in the format array misaligns subsequent column formats in wpdb->insert().
+		$data    = [ 'token' => $token, 'label' => $label, 'created_by' => $user_id ];
+		$formats = [ '%s', '%s', '%d' ];
+
+		if ( null !== $expires_at ) {
+			$data['expires_at'] = $expires_at;
+			$formats            = [ '%s', '%s', '%s', '%d' ];
+		}
+
+		$wpdb->insert( $this->table(), $data, $formats );
 
 		return $token;
 	}
