@@ -70,33 +70,36 @@ export function nearestCompliantShade( fgHex, bgHex, isLargeText = false ) {
 		return fgHex;
 	}
 
-	const bg        = relativeLuminance( bgHex );
+	const bg           = relativeLuminance( bgHex );
 	const { r, g, b } = hexToRgb( fgHex );
 
-	// Determine direction: darken fg if bg is dark, lighten if bg is light.
-	const darkenFg = bg > 0.5;
+	// Go toward whichever pole (black or white) gives more contrast with the background.
+	// Break-even is at bg luminance ≈ 0.179, not 0.5.
+	const darkenFg = ( bg + 0.05 ) / 0.05 >= 1.05 / ( bg + 0.05 );
 
-	let cr = r, cg = g, cb = b;
-	const step = darkenFg ? -5 : 5;
+	function tryDirection( darken ) {
+		const step = darken ? -5 : 5;
+		let cr = r, cg = g, cb = b;
+		for ( let i = 0; i < 60; i++ ) {
+			cr = Math.min( 255, Math.max( 0, cr + step ) );
+			cg = Math.min( 255, Math.max( 0, cg + step ) );
+			cb = Math.min( 255, Math.max( 0, cb + step ) );
 
-	for ( let i = 0; i < 50; i++ ) {
-		cr = Math.min( 255, Math.max( 0, cr + step ) );
-		cg = Math.min( 255, Math.max( 0, cg + step ) );
-		cb = Math.min( 255, Math.max( 0, cb + step ) );
+			const candidate = rgbToHex( cr, cg, cb );
+			if ( contrastRatio( candidate, bgHex ) >= threshold ) {
+				return candidate;
+			}
 
-		const candidate = rgbToHex( cr, cg, cb );
-		if ( contrastRatio( candidate, bgHex ) >= threshold ) {
-			return candidate;
+			if ( ( step < 0 && cr === 0 && cg === 0 && cb === 0 ) ||
+			     ( step > 0 && cr === 255 && cg === 255 && cb === 255 ) ) {
+				break;
+			}
 		}
-
-		// Stop if we've hit white or black
-		if ( ( step < 0 && cr === 0 && cg === 0 && cb === 0 ) ||
-		     ( step > 0 && cr === 255 && cg === 255 && cb === 255 ) ) {
-			break;
-		}
+		return null;
 	}
 
-	return null;
+	// Try the preferred direction first; fall back to the other pole if it yields no result.
+	return tryDirection( darkenFg ) ?? tryDirection( ! darkenFg );
 }
 
 /** { r, g, b } integers → "#rrggbb". */

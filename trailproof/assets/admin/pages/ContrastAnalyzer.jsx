@@ -555,6 +555,235 @@ function InsightBar( { insights } ) {
 	);
 }
 
+// ─── Fix-all banner ───────────────────────────────────────────────────────────
+
+function FixAllBanner( { items, onComplete } ) {
+	const [ confirming, setConfirming ] = useState( false );
+	const [ applying,   setApplying ]   = useState( false );
+	const [ progress,   setProgress ]   = useState( null );  // { done, total }
+	const [ applyError, setApplyError ] = useState( null );
+
+	// Deduplicate by selector — fix is global (post_id 0) so one API call per selector covers all pages.
+	const fixable = [];
+	const seenSelectors = new Set();
+	for ( const i of items ) {
+		if ( i.status === 'fixed' || i.status === 'na' || i.incomplete ) continue;
+		if ( ! i.fg_color || ! i.bg_color ) continue;
+		if ( seenSelectors.has( i.selector ) ) continue;
+		const suggested = nearestCompliantShade( i.fg_color, i.bg_color );
+		if ( ! suggested ) continue;
+		seenSelectors.add( i.selector );
+		fixable.push( { ...i, _suggested: suggested } );
+	}
+
+	if ( fixable.length === 0 ) return null;
+
+	async function applyAll() {
+		setApplying( true );
+		setConfirming( false );
+		setApplyError( null );
+		setProgress( { done: 0, total: fixable.length } );
+
+		let done = 0;
+		const errors = [];
+		for ( const issue of fixable ) {
+			try {
+				await apiFetch( {
+					path:   '/trailproof/v1/corrections',
+					method: 'POST',
+					data:   {
+						fingerprint:    issue.fingerprint,
+						issue_id:       issue.id,
+						post_id:        0,
+						url:            '',
+						selector:       issue.selector,
+						transform_type: 'set_text_color',
+						payload:        { selector: issue.selector, color: issue._suggested },
+						original:       { color: issue.fg_color },
+						note:           'Color contrast fix — applied from Trailproof Color Contrast Analyzer (fix all)',
+					},
+				} );
+			} catch ( err ) {
+				errors.push( issue.selector );
+			}
+			done++;
+			setProgress( { done, total: fixable.length } );
+		}
+
+		setApplying( false );
+		setProgress( null );
+		if ( errors.length > 0 ) {
+			setApplyError( `${ errors.length } fix(es) failed. The rest were applied.` );
+		}
+		onComplete?.();
+	}
+
+	return (
+		<div style={ {
+			background:   '#fff',
+			border:       '1px solid #E8ECF2',
+			borderLeft:   '4px solid #2563EB',
+			borderRadius: 8,
+			padding:      '14px 18px',
+			marginBottom: 16,
+			display:      'flex',
+			alignItems:   'center',
+			gap:          14,
+			flexWrap:     'wrap',
+		} }>
+			<span style={ { fontSize: 20, lineHeight: 1, flexShrink: 0 } } aria-hidden="true">⚡</span>
+			<div style={ { flex: 1, minWidth: 0 } }>
+				<div style={ { fontSize: 13, fontWeight: 700, color: '#1A2742', marginBottom: 2 } }>
+					{ fixable.length }{ ' ' }
+					{ fixable.length === 1
+						? __( 'issue can be fixed automatically', 'trailproof' )
+						: __( 'issues can be fixed automatically', 'trailproof' )
+					}
+				</div>
+				<div style={ { fontSize: 12, color: '#64748B' } }>
+					{ __( 'Nearest AA-compliant shade applied as a global CSS rule. All changes are reversible.', 'trailproof' ) }
+				</div>
+				{ applyError && (
+					<div style={ { marginTop: 6, fontSize: 12, color: '#B91C1C' } }>{ applyError }</div>
+				) }
+			</div>
+			<div style={ { flexShrink: 0 } }>
+				{ applying ? (
+					<span style={ { fontSize: 12, color: '#2563EB', fontWeight: 600 } }>
+						{ __( 'Applying…', 'trailproof' ) }{ ' ' }
+						{ progress && `${ progress.done } / ${ progress.total }` }
+					</span>
+				) : (
+					<button
+						onClick={ () => setConfirming( true ) }
+						style={ {
+							padding:      '7px 16px',
+							fontSize:     12,
+							fontWeight:   700,
+							borderRadius: 6,
+							border:       'none',
+							background:   '#2563EB',
+							color:        '#fff',
+							cursor:       'pointer',
+						} }
+					>
+						{ __( 'Fix all →', 'trailproof' ) }
+					</button>
+				) }
+			</div>
+
+			{ confirming && (
+				<Modal
+					title={ __( 'Apply all color contrast fixes?', 'trailproof' ) }
+					onRequestClose={ () => setConfirming( false ) }
+					size="medium"
+				>
+					<p style={ { margin: '0 0 12px', fontSize: 13, color: '#475569', lineHeight: 1.6 } }>
+						{ sprintf(
+							__( 'This will inject %d CSS rule(s) that override text colors sitewide. Each rule targets the nearest AA-compliant shade and can be undone individually.', 'trailproof' ),
+							fixable.length
+						) }
+					</p>
+					<div style={ { background: '#FFFBEB', border: '1px solid #FCD34D', borderRadius: 6, padding: '10px 14px', marginBottom: 16, fontSize: 12, color: '#92400E', lineHeight: 1.6 } }>
+						<strong>{ __( 'Before applying:', 'trailproof' ) }</strong>{ ' ' }
+						{ __( 'Suggested colors are algorithmically derived and may not match your brand palette. Review with your design team before publishing to a live site.', 'trailproof' ) }
+					</div>
+					<div style={ { display: 'flex', gap: 8, justifyContent: 'flex-end' } }>
+						<button
+							onClick={ () => setConfirming( false ) }
+							style={ { padding: '7px 16px', fontSize: 13, borderRadius: 6, border: '1px solid #CBD5E1', background: '#fff', color: '#475569', cursor: 'pointer' } }
+						>
+							{ __( 'Cancel', 'trailproof' ) }
+						</button>
+						<button
+							onClick={ applyAll }
+							style={ { padding: '7px 16px', fontSize: 13, fontWeight: 600, borderRadius: 6, border: 'none', background: '#2563EB', color: '#fff', cursor: 'pointer' } }
+						>
+							{ sprintf( __( 'Apply %d fixes →', 'trailproof' ), fixable.length ) }
+						</button>
+					</div>
+				</Modal>
+			) }
+		</div>
+	);
+}
+
+// ─── Undo-all banner ──────────────────────────────────────────────────────────
+
+function UndoAllBanner( { correctionIds, onUndone } ) {
+	const [ undoing,  setUndoing ]  = useState( false );
+	const [ progress, setProgress ] = useState( null );
+
+	async function undoAll() {
+		setUndoing( true );
+		setProgress( { done: 0, total: correctionIds.length } );
+		let done = 0;
+		for ( const id of correctionIds ) {
+			try {
+				await apiFetch( {
+					path:   `/trailproof/v1/corrections/${ id }`,
+					method: 'PATCH',
+					data:   { enabled: false },
+				} );
+			} catch {}
+			done++;
+			setProgress( { done, total: correctionIds.length } );
+		}
+		setUndoing( false );
+		setProgress( null );
+		onUndone?.();
+	}
+
+	return (
+		<div style={ {
+			background:   '#F0FDF4',
+			border:       '1px solid #BBF7D0',
+			borderLeft:   '4px solid #16A34A',
+			borderRadius: 8,
+			padding:      '12px 18px',
+			marginBottom: 16,
+			display:      'flex',
+			alignItems:   'center',
+			gap:          14,
+			flexWrap:     'wrap',
+		} }>
+			<span style={ { fontSize: 18, lineHeight: 1, flexShrink: 0 } } aria-hidden="true">✓</span>
+			<div style={ { flex: 1, fontSize: 13, fontWeight: 600, color: '#15803D' } }>
+				{ sprintf(
+					correctionIds.length === 1
+						? __( '%d fix applied sitewide — review the list below and undo any you want to revert.', 'trailproof' )
+						: __( '%d fixes applied sitewide — review the list below and undo any you want to revert.', 'trailproof' ),
+					correctionIds.length
+				) }
+			</div>
+			<div style={ { flexShrink: 0 } }>
+				{ undoing ? (
+					<span style={ { fontSize: 12, color: '#15803D', fontWeight: 600 } }>
+						{ __( 'Undoing…', 'trailproof' ) }{ ' ' }
+						{ progress && `${ progress.done } / ${ progress.total }` }
+					</span>
+				) : (
+					<button
+						onClick={ undoAll }
+						style={ {
+							padding:      '6px 14px',
+							fontSize:     12,
+							fontWeight:   700,
+							borderRadius: 6,
+							border:       '1px solid #16A34A',
+							background:   '#fff',
+							color:        '#15803D',
+							cursor:       'pointer',
+						} }
+					>
+						{ __( 'Undo all', 'trailproof' ) }
+					</button>
+				) }
+			</div>
+		</div>
+	);
+}
+
 function groupByPage( items ) {
 	const map = new Map();
 	for ( const issue of items ) {
@@ -600,6 +829,13 @@ export default function ContrastAnalyzer() {
 		: items.filter( i => i.status !== 'fixed' && i.status !== 'na' );
 	const insights = buildInsights( items );
 
+	// All unique active correction ids — drives the Undo-all banner.
+	const undoableIds = [ ...new Set(
+		items
+			.filter( i => ( i.status === 'fixed' || i.status === 'na' ) && i.correction_id )
+			.map( i => i.correction_id )
+	) ];
+
 	return (
 		<div style={ { maxWidth: 780 } }>
 
@@ -631,6 +867,18 @@ export default function ContrastAnalyzer() {
 					<StatsBar total={ items.filter( i => i.status !== 'fixed' && i.status !== 'na' ).length } passed={ data?.passed ?? 0 } />
 
 					{ insights && <InsightBar insights={ insights } /> }
+
+					<FixAllBanner
+						items={ items }
+						onComplete={ () => { setFilter( 'all' ); fetchData(); } }
+					/>
+
+					{ undoableIds.length > 0 && (
+						<UndoAllBanner
+							correctionIds={ undoableIds }
+							onUndone={ fetchData }
+						/>
+					) }
 
 					{/* Filter */}
 					<div style={ { display: 'flex', gap: 8, marginBottom: 16 } }>
